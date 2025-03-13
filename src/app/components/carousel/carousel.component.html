@@ -1,0 +1,333 @@
+<div
+  class="w-full overflow-hidden rounded-lg"
+  (mouseenter)="pauseAutoRotate()"
+  (mouseleave)="resumeAutoRotate()"
+  role="region"
+  aria-label="Activity carousel"
+>
+  <div class="relative">
+    <!-- Desktop Carousel (2 activities per view) -->
+    <div class="hidden md:flex md:space-x-4">
+      <div
+        *ngFor="
+          let activity of activities | slice : currentIndex : currentIndex + 2;
+          let i = index
+        "
+        class="w-1/2 transition-all duration-300 ease-in-out relative"
+      >
+        <a [routerLink]="['/activities', activity.id]" class="block">
+          <div
+            class="h-64 overflow-hidden rounded-lg transition-transform hover:shadow-lg hover:scale-[1.02]"
+          >
+            <img
+              [src]="activity.images[0]"
+              [alt]="activity.title"
+              class="w-full h-full object-cover"
+            />
+            <!-- Rating Badge -->
+            <div
+              class="absolute top-2 left-2 bg-white bg-opacity-90 rounded-lg px-2 py-1 flex items-center shadow-sm"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 text-yellow-500 mr-1"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                />
+              </svg>
+              <span class="text-sm font-medium">{{ activity.rating }}</span>
+            </div>
+          </div>
+        </a>
+        <!-- Favorite Button -->
+        <button
+          (click)="onFavoriteToggle(activity.id, $event)"
+          class="absolute top-2 right-2 p-2 rounded-full bg-white bg-opacity-90 shadow-sm hover:bg-opacity-100 transition-colors z-10"
+          aria-label="Toggle favorite"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            [class.text-red-500]="isFavorite(activity.id)"
+            [class.text-gray-400]="!isFavorite(activity.id)"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+            />
+          </svg>
+        </button>
+        <!-- Activity Info Below Image -->
+        <div class="mt-2 px-1">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+            {{ activity.title }}
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-2">
+            {{ activity.description | slice : 0 : 100
+            }}{{ activity.description.length > 100 ? "..." : "" }}
+          </p>
+          <!-- Discover Now Button -->
+          <div class="flex justify-end">
+            <a
+              [routerLink]="['/activities', activity.id]"
+              class="bg-yellow-400 hover:bg-yellow-500 text-black font-medium text-sm px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2 flex items-center no-underline"
+            >
+              DISCOVER NOW
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+      <!-- Show first activity at the end if only 1 activity left -->
+      <div
+        *ngIf="activities.length > 0 && activities.length - currentIndex === 1"
+        class="w-1/2 transition-all duration-300 ease-in-out relative"
+      >
+        <a [routerLink]="['/activities', activities[0].id]" class="block">
+          <div
+            class="h-64 overflow-hidden rounded-lg transition-transform hover:shadow-lg hover:scale-[1.02]"
+          >
+            <img
+              [src]="activities[0].images[0]"
+              [alt]="activities[0].title"
+              class="w-full h-full object-cover"
+            />
+            <!-- Rating Badge -->
+            <div
+              class="absolute top-2 left-2 bg-white bg-opacity-90 rounded-lg px-2 py-1 flex items-center shadow-sm"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 text-yellow-500 mr-1"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                />
+              </svg>
+              <span class="text-sm font-medium">{{
+                activities[0].rating
+              }}</span>
+            </div>
+          </div>
+        </a>
+        <!-- Favorite Button -->
+        <button
+          (click)="onFavoriteToggle(activities[0].id, $event)"
+          class="absolute top-2 right-2 p-2 rounded-full bg-white bg-opacity-90 shadow-sm hover:bg-opacity-100 transition-colors z-10"
+          aria-label="Toggle favorite"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            [class.text-red-500]="isFavorite(activities[0].id)"
+            [class.text-gray-400]="!isFavorite(activities[0].id)"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+            />
+          </svg>
+        </button>
+        <!-- Activity Info Below Image -->
+        <div class="mt-2 px-1">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+            {{ activities[0].title }}
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-2">
+            {{ activities[0].description | slice : 0 : 100
+            }}{{ activities[0].description.length > 100 ? "..." : "" }}
+          </p>
+          <!-- Discover Now Button -->
+          <div class="flex justify-end">
+            <a
+              [routerLink]="['/activities', activities[0].id]"
+              class="bg-yellow-400 hover:bg-yellow-500 text-black font-medium text-sm px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2 flex items-center no-underline"
+            >
+              DISCOVER NOW
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Carousel (1 activity per view) -->
+    <div class="md:hidden relative">
+      <a
+        [routerLink]="['/activities', activities[currentIndex].id]"
+        class="block"
+      >
+        <div
+          class="w-full h-64 transition-all duration-300 ease-in-out rounded-lg overflow-hidden transition-transform hover:shadow-lg hover:scale-[1.02]"
+        >
+          <img
+            [src]="activities[currentIndex].images[0]"
+            [alt]="activities[currentIndex].title"
+            class="w-full h-full object-cover"
+          />
+          <!-- Rating Badge -->
+          <div
+            class="absolute top-2 left-2 bg-white bg-opacity-90 rounded-lg px-2 py-1 flex items-center shadow-sm"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 text-yellow-500 mr-1"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+              />
+            </svg>
+            <span class="text-sm font-medium">{{
+              activities[currentIndex].rating
+            }}</span>
+          </div>
+        </div>
+      </a>
+      <!-- Favorite Button -->
+      <button
+        (click)="onFavoriteToggle(activities[currentIndex].id, $event)"
+        class="absolute top-2 right-2 p-2 rounded-full bg-white bg-opacity-90 shadow-sm hover:bg-opacity-100 transition-colors"
+        aria-label="Toggle favorite"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          [class.text-red-500]="isFavorite(activities[currentIndex].id)"
+          [class.text-gray-400]="!isFavorite(activities[currentIndex].id)"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+          />
+        </svg>
+      </button>
+      <!-- Activity Info Below Image (Mobile) -->
+      <div class="mt-3">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+          {{ activities[currentIndex].title }}
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">
+          {{ activities[currentIndex].description | slice : 0 : 100
+          }}{{ activities[currentIndex].description.length > 100 ? "..." : "" }}
+        </p>
+        <!-- Discover Now Button -->
+        <div class="flex justify-end">
+          <a
+            [routerLink]="['/activities', activities[currentIndex].id]"
+            class="bg-yellow-400 hover:bg-yellow-500 text-black font-medium text-sm px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2 flex items-center no-underline"
+          >
+            DISCOVER NOW
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 ml-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Arrows -->
+    <button
+      (click)="prev()"
+      class="absolute left-2 top-32 -translate-y-1/2 bg-white/70 hover:bg-white/90 rounded-full p-2 shadow-md transition-colors"
+      aria-label="Previous activity"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M15 19l-7-7 7-7"
+        />
+      </svg>
+    </button>
+    <button
+      (click)="next()"
+      class="absolute right-2 top-32 -translate-y-1/2 bg-white/70 hover:bg-white/90 rounded-full p-2 shadow-md transition-colors"
+      aria-label="Next activity"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 5l7 7-7 7"
+        />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Dots Navigation (Moved below the carousel) -->
+  <div class="flex justify-center space-x-2 mt-4">
+    <button
+      *ngFor="let activity of activities; let i = index"
+      (click)="goToSlide(i)"
+      [class]="
+        'w-3 h-3 rounded-full transition-colors ' +
+        (i === currentIndex
+          ? 'bg-blue-500'
+          : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500')
+      "
+      [attr.aria-label]="'Go to activity ' + (i + 1)"
+      [attr.aria-current]="i === currentIndex ? 'true' : 'false'"
+    ></button>
+  </div>
+</div>

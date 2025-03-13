@@ -1,0 +1,67 @@
+<!-- Main Layout -->
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <!-- Header -->
+  <app-header></app-header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-6">
+    <!-- Title and Description -->
+    <div class="text-center max-w-3xl mx-auto mb-10">
+      <h1
+        class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4"
+      >
+        Explore Activities for the family and friend and enjoy at the right time
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-400">
+        Plan fun activities with family and friends, perfectly timed for your
+        enjoyment.
+      </p>
+    </div>
+
+    <!-- Featured Activities Carousel -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+        Activities of the Day
+      </h2>
+      <app-carousel
+        [activities]="activityService.featuredActivities()"
+        (favoriteToggle)="toggleFavorite($event)"
+      ></app-carousel>
+    </section>
+
+    <!-- Search and Filter -->
+    <section class="mb-8">
+      <app-search-bar
+        (search)="onSearch($event)"
+        (openFilter)="openFilter()"
+      ></app-search-bar>
+    </section>
+
+    <!-- Activity List -->
+    <section>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+        All Activities
+      </h2>
+      <app-activity-list
+        [activities]="activityService.filteredActivities()"
+        [loading]="isLoading"
+        (favoriteToggle)="toggleFavorite($event)"
+      ></app-activity-list>
+    </section>
+  </main>
+
+  <!-- Footer (Desktop Only) -->
+  <app-footer></app-footer>
+
+  <!-- Bottom Navigation (Mobile Only) -->
+  <app-bottom-nav></app-bottom-nav>
+
+  <!-- Filter Modal -->
+  <app-filter
+    [isOpen]="isFilterOpen"
+    [currentFilter]="activityService.currentFilter()"
+    (close)="closeFilter()"
+    (applyFilter)="applyFilter($event)"
+    (resetFilter)="resetFilter()"
+  ></app-filter>
+</div>

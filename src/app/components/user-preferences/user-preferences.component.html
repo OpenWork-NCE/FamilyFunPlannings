@@ -1,0 +1,328 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <app-header></app-header>
+
+  <main class="container mx-auto px-4 py-6 pb-24">
+    <div class="user-preferences-container max-w-3xl mx-auto">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">
+          User Preferences
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-1">
+          Customize your experience
+        </p>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="flex justify-center items-center h-64">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"
+        ></div>
+      </div>
+
+      <!-- Error Message -->
+      <div
+        *ngIf="errorMessage && !isLoading"
+        class="bg-red-100 dark:bg-red-900 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 mb-6"
+      >
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <!-- Success Message -->
+      <div
+        *ngIf="successMessage && !isLoading"
+        class="bg-green-100 dark:bg-green-900 border-l-4 border-green-500 text-green-700 dark:text-green-300 p-4 mb-6"
+      >
+        <p>{{ successMessage }}</p>
+      </div>
+
+      <!-- Preferences Form -->
+      <div
+        *ngIf="!isLoading"
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"
+      >
+        <form (ngSubmit)="savePreferences()">
+          <!-- Profile Section -->
+          <div class="mb-8">
+            <h2
+              class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 border-b dark:border-gray-700 pb-2"
+            >
+              Profile Information
+            </h2>
+
+            <div class="mb-4">
+              <label
+                for="displayName"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >Display Name</label
+              >
+              <input
+                type="text"
+                id="displayName"
+                name="displayName"
+                [(ngModel)]="userPreferences.displayName"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            <div class="mb-4">
+              <label
+                for="email"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >Email</label
+              >
+              <input
+                type="email"
+                id="email"
+                name="email"
+                [(ngModel)]="userPreferences.email"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Email cannot be changed
+              </p>
+            </div>
+          </div>
+
+          <!-- Notification Preferences -->
+          <div class="mb-8">
+            <h2
+              class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 border-b dark:border-gray-700 pb-2"
+            >
+              Notification Preferences
+            </h2>
+
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                id="notificationsEnabled"
+                name="notificationsEnabled"
+                [(ngModel)]="userPreferences.notificationsEnabled"
+                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
+              />
+              <label
+                for="notificationsEnabled"
+                class="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+              >
+                Enable notifications
+              </label>
+            </div>
+          </div>
+
+          <!-- Appearance Settings -->
+          <div class="mb-8">
+            <h2
+              class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 border-b dark:border-gray-700 pb-2"
+            >
+              Appearance Settings
+            </h2>
+
+            <div class="flex items-center justify-between">
+              <label class="block text-sm text-gray-700 dark:text-gray-300">
+                Dark Mode
+              </label>
+              <button
+                type="button"
+                (click)="toggleDarkMode()"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                [class.bg-indigo-600]="isDarkMode"
+                [class.bg-gray-200]="!isDarkMode"
+              >
+                <span class="sr-only">Toggle dark mode</span>
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  [class.translate-x-6]="isDarkMode"
+                  [class.translate-x-1]="!isDarkMode"
+                ></span>
+                <svg
+                  *ngIf="!isDarkMode"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="absolute left-1 h-4 w-4 text-gray-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <svg
+                  *ngIf="isDarkMode"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="absolute right-1 h-4 w-4 text-white"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+                  />
+                </svg>
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Switch between light and dark theme
+            </p>
+          </div>
+
+          <!-- Activity Preferences -->
+          <div class="mb-8">
+            <h2
+              class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 border-b dark:border-gray-700 pb-2"
+            >
+              Activity Preferences
+            </h2>
+
+            <!-- Preferred Categories -->
+            <div class="mb-6">
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Preferred Categories
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  *ngFor="let category of availableCategories"
+                  type="button"
+                  (click)="toggleCategory(category)"
+                  class="px-3 py-1 text-sm rounded-full transition-colors"
+                  [class.bg-indigo-100]="
+                    isCategorySelected(category) && !isDarkMode
+                  "
+                  [class.text-indigo-700]="
+                    isCategorySelected(category) && !isDarkMode
+                  "
+                  [class.bg-gray-200]="
+                    !isCategorySelected(category) && !isDarkMode
+                  "
+                  [class.text-gray-700]="
+                    !isCategorySelected(category) && !isDarkMode
+                  "
+                  [class.bg-indigo-900]="
+                    isCategorySelected(category) && isDarkMode
+                  "
+                  [class.text-indigo-300]="
+                    isCategorySelected(category) && isDarkMode
+                  "
+                  [class.bg-gray-700]="
+                    !isCategorySelected(category) && isDarkMode
+                  "
+                  [class.text-gray-300]="
+                    !isCategorySelected(category) && isDarkMode
+                  "
+                >
+                  {{ category }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Age Groups -->
+            <div class="mb-6">
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Age Groups
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  *ngFor="let ageGroup of availableAgeGroups"
+                  type="button"
+                  (click)="toggleAgeGroup(ageGroup)"
+                  class="px-3 py-1 text-sm rounded-full transition-colors"
+                  [class.bg-indigo-100]="
+                    isAgeGroupSelected(ageGroup) && !isDarkMode
+                  "
+                  [class.text-indigo-700]="
+                    isAgeGroupSelected(ageGroup) && !isDarkMode
+                  "
+                  [class.bg-gray-200]="
+                    !isAgeGroupSelected(ageGroup) && !isDarkMode
+                  "
+                  [class.text-gray-700]="
+                    !isAgeGroupSelected(ageGroup) && !isDarkMode
+                  "
+                  [class.bg-indigo-900]="
+                    isAgeGroupSelected(ageGroup) && isDarkMode
+                  "
+                  [class.text-indigo-300]="
+                    isAgeGroupSelected(ageGroup) && isDarkMode
+                  "
+                  [class.bg-gray-700]="
+                    !isAgeGroupSelected(ageGroup) && isDarkMode
+                  "
+                  [class.text-gray-300]="
+                    !isAgeGroupSelected(ageGroup) && isDarkMode
+                  "
+                >
+                  {{ ageGroup }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Budget Slider -->
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Maximum Budget: ${{ userPreferences.maxBudget }}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="200"
+                step="10"
+                [(ngModel)]="userPreferences.maxBudget"
+                name="maxBudget"
+                class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              />
+              <div
+                class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1"
+              >
+                <span>$0</span>
+                <span>$100</span>
+                <span>$200</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="flex justify-end">
+            <button
+              type="submit"
+              [disabled]="isSaving"
+              class="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              <span *ngIf="!isSaving">Save Preferences</span>
+              <span *ngIf="isSaving" class="flex items-center">
+                <svg
+                  class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Saving...
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <app-footer></app-footer>
+  <app-bottom-nav></app-bottom-nav>
+</div>

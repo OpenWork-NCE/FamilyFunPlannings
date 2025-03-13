@@ -1,0 +1,174 @@
+<div class="activity-info" *ngIf="activity">
+  <!-- Description Section -->
+  <div class="mb-6 border-b border-gray-700 pb-6">
+    <div
+      class="flex justify-between items-center mb-2 md:hidden"
+      (click)="toggleSection('description')"
+    >
+      <h2 class="text-xl font-semibold text-white">Description</h2>
+      <button class="text-white">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          *ngIf="!isSectionExpanded('description')"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          *ngIf="isSectionExpanded('description')"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </button>
+    </div>
+    <h2 class="text-xl font-semibold text-white mb-2 hidden md:block">
+      Description
+    </h2>
+    <div *ngIf="isSectionExpanded('description') || true" class="text-white">
+      <p>{{ activity.description }}</p>
+    </div>
+  </div>
+
+  <!-- Details Section -->
+  <div class="mb-6 border-b border-gray-700 pb-6">
+    <div
+      class="flex justify-between items-center mb-2 md:hidden"
+      (click)="toggleSection('details')"
+    >
+      <h2 class="text-xl font-semibold text-white">Details</h2>
+      <button class="text-white">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          *ngIf="!isSectionExpanded('details')"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          *ngIf="isSectionExpanded('details')"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </button>
+    </div>
+    <h2 class="text-xl font-semibold text-white mb-2 hidden md:block">
+      Details
+    </h2>
+    <div
+      *ngIf="isSectionExpanded('details') || true"
+      class="grid grid-cols-1 md:grid-cols-2 gap-4"
+    >
+      <div>
+        <h3 class="text-sm font-medium text-gray-300">Duration</h3>
+        <p class="text-white">{{ activity.duration }}</p>
+      </div>
+      <div>
+        <h3 class="text-sm font-medium text-gray-300">Location</h3>
+        <p class="text-white">{{ activity.location }}</p>
+      </div>
+      <div>
+        <h3 class="text-sm font-medium text-gray-300">Created By</h3>
+        <p class="text-white">{{ activity.createdBy }}</p>
+      </div>
+      <div>
+        <h3 class="text-sm font-medium text-gray-300">Created On</h3>
+        <p class="text-white">
+          {{ activity.createdAt | date : "mediumDate" }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Info Section -->
+  <div *ngIf="activity.additionalInfo" class="mb-6">
+    <div
+      class="flex justify-between items-center mb-2 md:hidden"
+      (click)="toggleSection('additionalInfo')"
+    >
+      <h2 class="text-xl font-semibold text-white">Additional Information</h2>
+      <button class="text-white">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          *ngIf="!isSectionExpanded('additionalInfo')"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          *ngIf="isSectionExpanded('additionalInfo')"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </button>
+    </div>
+    <h2 class="text-xl font-semibold text-white mb-2 hidden md:block">
+      Additional Information
+    </h2>
+    <div *ngIf="isSectionExpanded('additionalInfo') || true" class="text-white">
+      <p>{{ activity.additionalInfo }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- Placeholder when no activity is available -->
+<div
+  *ngIf="!activity"
+  class="p-4 border border-gray-700 rounded-lg bg-gray-800"
+>
+  <div class="animate-pulse">
+    <div class="h-6 bg-gray-700 rounded w-1/4 mb-2"></div>
+    <div class="h-8 bg-gray-700 rounded w-3/4 mb-4"></div>
+    <div class="h-4 bg-gray-700 rounded w-1/2 mb-6"></div>
+
+    <div class="h-6 bg-gray-700 rounded w-1/4 mb-2"></div>
+    <div class="h-20 bg-gray-700 rounded mb-6"></div>
+
+    <div class="h-6 bg-gray-700 rounded w-1/4 mb-2"></div>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="h-12 bg-gray-700 rounded"></div>
+      <div class="h-12 bg-gray-700 rounded"></div>
+    </div>
+  </div>
+</div>

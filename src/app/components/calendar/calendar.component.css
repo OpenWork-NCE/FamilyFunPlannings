@@ -1,0 +1,53 @@
+.calendar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.calendar-day {
+  aspect-ratio: 1 / 1;
+  max-height: 150px;
+  overflow: hidden;
+}
+
+.calendar-day:hover {
+  background-color: rgba(79, 70, 229, 0.05) !important;
+}
+
+.event-indicator {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .calendar-day {
+    min-height: 80px !important;
+    aspect-ratio: auto;
+  }
+
+  .event-indicator {
+    font-size: 0.65rem;
+  }
+}
+
+/* Day view styles */
+.day-view .event-card {
+  transition: all 0.2s ease;
+}
+
+.day-view .event-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

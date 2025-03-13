@@ -1,0 +1,33 @@
+/* Comment form styling */
+textarea:focus {
+  outline: none;
+}
+
+/* Comment list styling */
+.comments-section {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Improve accessibility */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* Animation for new comments */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.comments-section > div:first-child {
+  animation: fadeIn 0.3s ease-in-out;
+}

@@ -1,0 +1,100 @@
+---
+description: You are an expert in Angular 19, JavaScript, TypeScript, and modern front-end development best practices, including TailwindCSS v4.
+globs: 
+alwaysApply: false
+---
+Key Principles:
+  - Enforce best practices for Angular component structure and architecture.
+  - Optimize Angular applications for maintainability and modularity.
+  - Enforce consistency in coding style using ESLint and Prettier.
+  - Standardize styling using TailwindCSS v4 with inline classes in component templates.
+  - Ensure adherence to collaboration and Git workflow standards.
+
+### Angular Best Practices
+
+- **Component Structure**
+  - Enforce modular component design using Angular Standalone Components.
+  - Require components to be structured within feature modules unless explicitly standalone.
+  - Encourage using Angular DI for state and service management instead of singletons.
+  - Require OnPush change detection strategy by default.
+
+- **Lazy Loading & Routing**
+  - Enforce lazy loading for feature modules.
+  - Ensure route guards are implemented for protected routes.
+  - Warn against using `*ngIf` inside `ngFor` to improve rendering efficiency.
+
+- **State Management**
+  - Require RxJS over direct state mutations in services.
+  - Suggest using Signals and RxJS where applicable.
+  - Discourage overuse of `setTimeout()` and `setInterval()` for state changes.
+
+- **Performance Considerations**
+  - Require the use of trackBy in `*ngFor` for better performance.
+  - Suggest avoiding deep component trees to reduce change detection overhead.
+  - Warn against directly modifying the DOM; prefer Angular Renderer2.
+
+- **Security Considerations**
+  - Require DOM sanitization for dynamic content injection.
+  - Warn against using `innerHTML` without Angular's built-in sanitization.
+  - Suggest using Angular's HttpClient with proper request headers for security.
+
+### Styling with TailwindCSS v4
+
+- **TailwindCSS Integration**
+  - Enforce the use of TailwindCSS v4 for all styling.
+  - Prohibit the use of separate `.css` or `.scss` files for components.
+  - Require all styling to be defined using Tailwind utility classes directly in component templates.
+  - Encourage the use of `@apply` only in global styles for reusability.
+
+- **Best Practices for TailwindCSS**
+  - Use a mobile-first approach for responsive design (`sm:`, `md:`, `lg:`, `xl:` breakpoints).
+  - Optimize utility class usage by avoiding redundant declarations.
+  - Encourage using Tailwind's theme configuration for consistent design.
+  - Require dark mode compatibility using `dark:` prefixed classes.
+  - Suggest using `group` and `peer` for complex component interactions instead of additional CSS.
+
+- **Enforce Readability in Templates**
+  - Encourage structured class ordering (position → layout → typography → colors).
+  - Require breaking long class lists into multiple lines for readability.
+  - Suggest creating reusable class presets using Angular directives for commonly used styles.
+
+### Code Style and Enforcements
+
+- **ESLint & Prettier**
+  - Enforce TypeScript strict mode.
+  - Require PascalCase for Angular components and services.
+  - Enforce consistent function and method return types.
+  - Require explicit access modifiers (public, private, protected).
+  - Warn against unused imports and variables.
+
+- **Naming Conventions**
+  - Enforce kebab-case for filenames (e.g., `user-profile.component.ts`).
+  - Require `I` prefix for interfaces (e.g., `IUser`).
+  - Require service files to use `.service.ts` suffix.
+
+### Collaboration & Git Workflow
+
+- **Commit Message Standards**
+  - Enforce Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`).
+  - Suggest detailed commit messages with a scope (`feat(auth): added login`).
+
+- **Branch Naming Conventions**
+  - Feature branches: `feature/{task-name}`
+  - Bugfix branches: `fix/{bug-description}`
+  - Hotfix branches: `hotfix/{critical-issue}`
+  - Release branches: `release/{version}`
+
+- **Pull Request Guidelines**
+  - Require PR description with the purpose, implementation details, and test instructions.
+  - Enforce CI/CD checks before merging (GitHub Actions).
+  - Require at least one code review before merging to `main`.
+
+### CI/CD Integration
+
+- **GitHub Actions**
+  - Run ESLint and Prettier checks on PRs.
+  - Enforce unit tests (`ng test`) before merging.
+  - Deploy only on successful builds and passing tests.
+
+---
+Adopt these rules to ensure high code quality, maintainability, and a streamlined development workflow in Angular 19 projects with TailwindCSS v4.

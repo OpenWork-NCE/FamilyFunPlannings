@@ -1,0 +1,120 @@
+<div class="comments-section">
+  <h2 class="text-2xl font-semibold text-white mb-6">Comments</h2>
+
+  <!-- Comment Form -->
+  <div *ngIf="isLoggedIn" class="mb-8">
+    <form [formGroup]="commentForm" (ngSubmit)="onSubmit()" class="space-y-4">
+      <div>
+        <label for="comment" class="block text-sm font-medium text-white mb-1"
+          >Add a comment</label
+        >
+        <div class="relative">
+          <textarea
+            id="comment"
+            formControlName="comment"
+            rows="3"
+            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-800 text-white"
+            [ngClass]="{
+              'border-red-500': hasError('comment'),
+              'border-gray-700': !hasError('comment')
+            }"
+            placeholder="Share your thoughts about this activity..."
+          ></textarea>
+          <div *ngIf="hasError('comment')" class="text-red-400 text-sm mt-1">
+            {{ getErrorMessage("comment") }}
+          </div>
+        </div>
+      </div>
+
+      <div
+        *ngIf="errorMessage"
+        class="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded relative"
+        role="alert"
+      >
+        <span class="block sm:inline">{{ errorMessage }}</span>
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="submit"
+          class="bg-blue-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          [disabled]="commentForm.invalid || isSubmitting"
+        >
+          <span *ngIf="isSubmitting" class="flex items-center justify-center">
+            <svg
+              class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Submitting...
+          </span>
+          <span *ngIf="!isSubmitting">Submit Comment</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Login Prompt for Guests -->
+  <div
+    *ngIf="!isLoggedIn"
+    class="bg-blue-900/30 border border-blue-700 text-blue-200 px-4 py-3 rounded mb-6"
+    role="alert"
+  >
+    <p class="font-medium">Want to join the conversation?</p>
+    <p class="text-sm">
+      Please
+      <a routerLink="/login" class="underline font-medium text-blue-300"
+        >log in</a
+      >
+      to leave a comment.
+    </p>
+  </div>
+
+  <!-- Comments List -->
+  <div class="space-y-6">
+    <div *ngIf="comments.length === 0" class="text-center py-8 text-gray-300">
+      <p>No comments yet. Be the first to share your thoughts!</p>
+    </div>
+
+    <div
+      *ngFor="let comment of comments"
+      class="border-b border-gray-700 pb-6 last:border-0"
+    >
+      <div class="flex justify-between items-start">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 mr-3">
+            <div
+              class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white"
+            >
+              {{ comment.user.charAt(0).toUpperCase() }}
+            </div>
+          </div>
+          <div>
+            <p class="font-medium text-white">{{ comment.user }}</p>
+            <p class="text-sm text-gray-300">
+              {{ formatTimestamp(comment.timestamp) }}
+            </p>
+            <div class="mt-2 text-white">
+              {{ comment.text }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
