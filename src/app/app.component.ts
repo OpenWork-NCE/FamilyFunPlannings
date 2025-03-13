@@ -1,10 +1,9 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { WelcomeComponent } from './components/welcome/welcome.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, WelcomeComponent],
+  imports: [RouterOutlet],
   templateUrl: './app.component.html',
   standalone: true,
 })

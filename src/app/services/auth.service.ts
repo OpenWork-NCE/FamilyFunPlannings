@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError, of } from 'rxjs';
 import { tap, catchError, delay } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { isPlatformBrowser } from '@angular/common';
 
 /**
  * Interface for login credentials
@@ -65,6 +66,7 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'user_data';
   private readonly GUEST_KEY = 'is_guest';
+  private isBrowser: boolean;
 
   // Mock users for fake authentication
   private mockUsers: User[] = [
@@ -83,25 +85,60 @@ export class AuthService {
   ];
 
   // BehaviorSubject to track and share the authentication state
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(
-    this.hasValidToken()
-  );
+  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
 
   // Observable to allow components to subscribe to authentication state changes
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
-  private currentUserSubject = new BehaviorSubject<any>(
-    this.getUserFromStorage()
-  );
+  private currentUserSubject = new BehaviorSubject<any>(null);
   currentUser$ = this.currentUserSubject.asObservable();
 
   // BehaviorSubject to track guest mode
-  private isGuestSubject = new BehaviorSubject<boolean>(
-    localStorage.getItem(this.GUEST_KEY) === 'true'
-  );
+  private isGuestSubject = new BehaviorSubject<boolean>(false);
   isGuest$ = this.isGuestSubject.asObservable();
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+
+    // Initialize state if in browser
+    if (this.isBrowser) {
+      this.isAuthenticatedSubject.next(this.hasValidToken());
+      this.currentUserSubject.next(this.getUserFromStorage());
+      this.isGuestSubject.next(this.getLocalStorage(this.GUEST_KEY) === 'true');
+    }
+  }
+
+  /**
+   * Safely get item from localStorage (only in browser)
+   */
+  private getLocalStorage(key: string): string | null {
+    if (this.isBrowser) {
+      return localStorage.getItem(key);
+    }
+    return null;
+  }
+
+  /**
+   * Safely set item in localStorage (only in browser)
+   */
+  private setLocalStorage(key: string, value: string): void {
+    if (this.isBrowser) {
+      localStorage.setItem(key, value);
+    }
+  }
+
+  /**
+   * Safely remove item from localStorage (only in browser)
+   */
+  private removeLocalStorage(key: string): void {
+    if (this.isBrowser) {
+      localStorage.removeItem(key);
+    }
+  }
 
   /**
    * Login user with email and password
@@ -147,7 +184,7 @@ export class AuthService {
    * Set guest mode
    */
   setGuestMode(): void {
-    localStorage.setItem(this.GUEST_KEY, 'true');
+    this.setLocalStorage(this.GUEST_KEY, 'true');
     this.isGuestSubject.next(true);
     this.router.navigate(['/home']);
   }
@@ -156,7 +193,7 @@ export class AuthService {
    * Check if user is in guest mode
    */
   isGuest(): boolean {
-    return localStorage.getItem(this.GUEST_KEY) === 'true';
+    return this.getLocalStorage(this.GUEST_KEY) === 'true';
   }
 
   /**
@@ -164,9 +201,9 @@ export class AuthService {
    */
   logout(): void {
     // Remove token and user data from localStorage
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
-    localStorage.removeItem(this.GUEST_KEY);
+    this.removeLocalStorage(this.TOKEN_KEY);
+    this.removeLocalStorage(this.USER_KEY);
+    this.removeLocalStorage(this.GUEST_KEY);
 
     // Update authentication state
     this.isAuthenticatedSubject.next(false);
@@ -182,7 +219,7 @@ export class AuthService {
    * @returns The JWT token or null if not found
    */
   getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return this.getLocalStorage(this.TOKEN_KEY);
   }
 
   /**
@@ -217,13 +254,13 @@ export class AuthService {
   private handleAuthSuccess(response: AuthResponse): void {
     if (response && response.accessToken) {
       // Store token in localStorage
-      localStorage.setItem(this.TOKEN_KEY, response.accessToken);
+      this.setLocalStorage(this.TOKEN_KEY, response.accessToken);
 
       // Store user data in localStorage
-      localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
+      this.setLocalStorage(this.USER_KEY, JSON.stringify(response.user));
 
       // Remove guest flag if it exists
-      localStorage.removeItem(this.GUEST_KEY);
+      this.removeLocalStorage(this.GUEST_KEY);
 
       // Update authentication state
       this.isAuthenticatedSubject.next(true);
@@ -237,7 +274,7 @@ export class AuthService {
    * @returns Boolean indicating if a valid token exists
    */
   private hasValidToken(): boolean {
-    const token = localStorage.getItem(this.TOKEN_KEY);
+    const token = this.getLocalStorage(this.TOKEN_KEY);
     return !!token;
   }
 
@@ -246,7 +283,7 @@ export class AuthService {
    * @returns User data or null if not found
    */
   private getUserFromStorage(): any {
-    const userData = localStorage.getItem(this.USER_KEY);
+    const userData = this.getLocalStorage(this.USER_KEY);
     return userData ? JSON.parse(userData) : null;
   }
 

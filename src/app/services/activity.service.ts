@@ -1,8 +1,9 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, BehaviorSubject } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import { AuthService } from './auth.service';
+import { isPlatformBrowser } from '@angular/common';
 
 export interface Activity {
   id: number;
@@ -38,6 +39,7 @@ export class ActivityService {
   private readonly GUEST_FAVORITES_KEY = 'guest_favorites';
   private favoriteActivities: number[] = [];
   private favoritesSubject = new BehaviorSubject<number[]>([]);
+  private isBrowser: boolean;
 
   // Use signals for reactive state
   activities = signal<Activity[]>([]);
@@ -45,7 +47,12 @@ export class ActivityService {
   featuredActivities = signal<Activity[]>([]);
   currentFilter = signal<ActivityFilter>({});
 
-  constructor(private http: HttpClient, private authService: AuthService) {
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
     // Load favorites from localStorage
     this.loadFavorites();
 
@@ -272,46 +279,97 @@ export class ActivityService {
     return [...this.favoriteActivities];
   }
 
-  // Save favorites to localStorage
-  private saveFavorites(): void {
-    localStorage.setItem(
-      'favoriteActivities',
-      JSON.stringify(this.favoriteActivities)
-    );
+  /**
+   * Safely get item from localStorage (only in browser)
+   */
+  private getLocalStorage(key: string): string | null {
+    if (this.isBrowser) {
+      return localStorage.getItem(key);
+    }
+    return null;
   }
 
-  // Load favorites from localStorage
-  private loadFavorites(): void {
-    const storedFavorites = localStorage.getItem('favoriteActivities');
-    if (storedFavorites) {
-      this.favoriteActivities = JSON.parse(storedFavorites);
-      this.favoritesSubject.next([...this.favoriteActivities]);
+  /**
+   * Safely set item in localStorage (only in browser)
+   */
+  private setLocalStorage(key: string, value: string): void {
+    if (this.isBrowser) {
+      localStorage.setItem(key, value);
     }
   }
 
-  // Load guest favorites from local storage
-  private loadGuestFavorites(): void {
-    const favoritesStr = localStorage.getItem(this.GUEST_FAVORITES_KEY);
-    const favorites: number[] = favoritesStr ? JSON.parse(favoritesStr) : [];
+  /**
+   * Safely remove item from localStorage (only in browser)
+   */
+  private removeLocalStorage(key: string): void {
+    if (this.isBrowser) {
+      localStorage.removeItem(key);
+    }
+  }
 
-    // Update the favoriteActivities array
-    this.favoriteActivities = favorites;
+  /**
+   * Save favorites to localStorage
+   */
+  private saveFavorites(): void {
+    if (this.authService.isGuest()) {
+      this.saveGuestFavorites(this.favoriteActivities);
+    } else {
+      // For authenticated users, save to localStorage
+      this.setLocalStorage(
+        'favoriteActivities',
+        JSON.stringify(this.favoriteActivities)
+      );
+    }
+  }
+
+  /**
+   * Load favorites from localStorage
+   */
+  private loadFavorites(): void {
+    if (this.authService.isGuest()) {
+      this.favoriteActivities = this.loadGuestFavorites();
+    } else {
+      const storedFavorites = this.getLocalStorage('favoriteActivities');
+      if (storedFavorites) {
+        try {
+          this.favoriteActivities = JSON.parse(storedFavorites);
+        } catch (e) {
+          console.error('Error parsing favorites:', e);
+          this.favoriteActivities = [];
+        }
+      }
+    }
     this.favoritesSubject.next([...this.favoriteActivities]);
   }
 
-  // Save favorites to localStorage for guest users
-  private saveGuestFavorites(): void {
-    if (this.authService.isGuest()) {
-      const favorites = this.favoriteActivities;
-      localStorage.setItem(this.GUEST_FAVORITES_KEY, JSON.stringify(favorites));
+  /**
+   * Load guest favorites from localStorage
+   */
+  private loadGuestFavorites(): number[] {
+    const favoritesStr = this.getLocalStorage(this.GUEST_FAVORITES_KEY);
+    if (favoritesStr) {
+      try {
+        return JSON.parse(favoritesStr);
+      } catch (e) {
+        console.error('Error parsing guest favorites:', e);
+        return [];
+      }
     }
+    return [];
   }
 
-  // Clear guest favorites from local storage
-  private clearGuestFavorites(): void {
-    localStorage.removeItem(this.GUEST_FAVORITES_KEY);
-    this.favoriteActivities = [];
-    this.favoritesSubject.next([]);
+  /**
+   * Save favorites to localStorage for guest users
+   */
+  private saveGuestFavorites(favorites: number[]): void {
+    this.setLocalStorage(this.GUEST_FAVORITES_KEY, JSON.stringify(favorites));
+  }
+
+  /**
+   * Clear guest favorites
+   */
+  clearGuestFavorites(): void {
+    this.removeLocalStorage(this.GUEST_FAVORITES_KEY);
   }
 
   // Get featured activities (random selection)

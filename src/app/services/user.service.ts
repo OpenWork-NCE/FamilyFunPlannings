@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { delay, map, take } from 'rxjs/operators';
 import { AuthService, User } from './auth.service';
+import { isPlatformBrowser } from '@angular/common';
 
 export interface UserProfile extends User {
   firstName?: string;
@@ -19,7 +20,8 @@ export interface UserProfile extends User {
   providedIn: 'root',
 })
 export class UserService {
-  private readonly USER_PROFILE_KEY = 'user-profile';
+  private readonly USER_PROFILE_KEY = 'user_profile';
+  private isBrowser: boolean;
 
   // Mock user profiles for testing
   private mockProfiles: UserProfile[] = [
@@ -55,34 +57,46 @@ export class UserService {
     },
   ];
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
     // Initialize user profile in localStorage if not exists
-    this.initializeUserProfile();
+    this.initUserProfile();
+  }
+
+  /**
+   * Safely get item from localStorage (only in browser)
+   */
+  private getLocalStorage(key: string): string | null {
+    if (this.isBrowser) {
+      return localStorage.getItem(key);
+    }
+    return null;
+  }
+
+  /**
+   * Safely set item in localStorage (only in browser)
+   */
+  private setLocalStorage(key: string, value: string): void {
+    if (this.isBrowser) {
+      localStorage.setItem(key, value);
+    }
   }
 
   /**
    * Initialize user profile in localStorage if not exists
    */
-  private initializeUserProfile(): void {
-    if (!localStorage.getItem(this.USER_PROFILE_KEY)) {
-      this.authService.currentUser$.pipe(take(1)).subscribe((currentUser) => {
-        if (currentUser) {
-          // Find matching mock profile or create a basic one
-          const mockProfile = this.mockProfiles.find(
-            (p) => p.email === currentUser.email
-          );
-          const profile = mockProfile || {
-            ...currentUser,
-            preferences: {
-              notifications: true,
-              emailUpdates: false,
-              activityAlerts: true,
-            },
-          };
+  private initUserProfile(): void {
+    if (!this.isBrowser) return;
 
-          localStorage.setItem(this.USER_PROFILE_KEY, JSON.stringify(profile));
-        }
-      });
+    if (!this.getLocalStorage(this.USER_PROFILE_KEY)) {
+      const defaultProfile = this.createDefaultProfile();
+      this.setLocalStorage(
+        this.USER_PROFILE_KEY,
+        JSON.stringify(defaultProfile)
+      );
     }
   }
 
@@ -209,5 +223,62 @@ export class UserService {
     return of(
       this.mockProfiles.find((profile) => profile.email === email) || null
     ).pipe(delay(300)); // Simulate API delay
+  }
+
+  /**
+   * Save user profile to localStorage
+   */
+  private saveProfile(profile: any): void {
+    if (!this.isBrowser) return;
+
+    this.setLocalStorage(this.USER_PROFILE_KEY, JSON.stringify(profile));
+  }
+
+  /**
+   * Get user profile from localStorage
+   */
+  private getProfile(): any {
+    if (!this.isBrowser) return null;
+
+    // Get profile from localStorage
+    const profileJson = this.getLocalStorage(this.USER_PROFILE_KEY);
+
+    if (profileJson) {
+      try {
+        return JSON.parse(profileJson);
+      } catch (e) {
+        console.error('Error parsing user profile:', e);
+        return null;
+      }
+    }
+
+    // If no profile in localStorage but user is authenticated, create a basic profile
+    if (this.authService.isAuthenticated()) {
+      const profile = this.createDefaultProfile();
+      this.saveProfile(profile);
+      return profile;
+    }
+
+    return null;
+  }
+
+  private createDefaultProfile(): UserProfile {
+    // Implement the logic to create a default profile based on the current user's information
+    // This is a placeholder and should be replaced with the actual implementation
+    return {
+      id: 'default',
+      email: 'default@example.com',
+      name: 'Default User',
+      role: 'USER',
+      firstName: 'Default',
+      lastName: 'User',
+      bio: 'This is a default user profile',
+      avatar: 'https://i.pravatar.cc/150?u=default@example.com',
+      preferences: {
+        notifications: true,
+        emailUpdates: false,
+        activityAlerts: true,
+      },
+    };
   }
 }

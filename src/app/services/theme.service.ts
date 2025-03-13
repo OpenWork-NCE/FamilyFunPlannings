@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { isPlatformBrowser } from '@angular/common';
 
 @Injectable({
   providedIn: 'root',
@@ -8,6 +9,7 @@ export class ThemeService {
   private readonly THEME_KEY = 'app-theme';
   private readonly DARK_THEME = 'dark';
   private readonly LIGHT_THEME = 'light';
+  private isBrowser: boolean;
 
   // Use signal for reactive theme state
   currentTheme = signal<string>(this.LIGHT_THEME);
@@ -16,14 +18,40 @@ export class ThemeService {
   private themeErrorSubject = new BehaviorSubject<string | null>(null);
   themeError$ = this.themeErrorSubject.asObservable();
 
-  constructor() {
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
     this.initTheme();
   }
 
+  /**
+   * Safely get item from localStorage (only in browser)
+   */
+  private getLocalStorage(key: string): string | null {
+    if (this.isBrowser) {
+      return localStorage.getItem(key);
+    }
+    return null;
+  }
+
+  /**
+   * Safely set item in localStorage (only in browser)
+   */
+  private setLocalStorage(key: string, value: string): void {
+    if (this.isBrowser) {
+      localStorage.setItem(key, value);
+    }
+  }
+
   private initTheme(): void {
+    if (!this.isBrowser) {
+      // Default to light theme on server
+      this.currentTheme.set(this.LIGHT_THEME);
+      return;
+    }
+
     try {
       // Check for saved theme preference in localStorage
-      const savedTheme = localStorage.getItem(this.THEME_KEY);
+      const savedTheme = this.getLocalStorage(this.THEME_KEY);
 
       // Check for system preference if no saved theme
       if (!savedTheme) {
@@ -43,6 +71,8 @@ export class ThemeService {
   }
 
   toggleTheme(): void {
+    if (!this.isBrowser) return;
+
     try {
       const newTheme =
         this.currentTheme() === this.DARK_THEME
@@ -68,8 +98,10 @@ export class ThemeService {
       // Update signal
       this.currentTheme.set(theme);
 
+      if (!this.isBrowser) return;
+
       // Save to localStorage
-      localStorage.setItem(this.THEME_KEY, theme);
+      this.setLocalStorage(this.THEME_KEY, theme);
 
       // Update document class for CSS
       if (theme === this.DARK_THEME) {
@@ -100,9 +132,11 @@ export class ThemeService {
       // Update signal
       this.currentTheme.set(theme);
 
+      if (!this.isBrowser) return;
+
       // Try to save to localStorage, but don't fail if it doesn't work
       try {
-        localStorage.setItem(this.THEME_KEY, theme);
+        this.setLocalStorage(this.THEME_KEY, theme);
       } catch (e) {
         console.warn('Could not save theme to localStorage:', e);
       }
@@ -116,7 +150,7 @@ export class ThemeService {
     } catch (e) {
       console.error('Critical error in fallback theme setter:', e);
       // Last resort - just try to set a basic theme
-      if (theme === this.DARK_THEME) {
+      if (this.isBrowser && theme === this.DARK_THEME) {
         try {
           document.documentElement.classList.add('dark');
         } catch (e) {

@@ -10,7 +10,6 @@ import {
 import { Activity, ActivityService } from '../../services/activity.service';
 import { Group, GroupService } from '../../services/group.service';
 import { AuthService } from '../../services/auth.service';
-import { CarouselComponent } from '../carousel/carousel.component';
 import { ActivityDetailInfoComponent } from '../activity-detail-info/activity-detail-info.component';
 import { CommentComponent } from '../comment/comment.component';
 import { DialogComponent } from '../dialog/dialog.component';
@@ -25,7 +24,6 @@ import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
     CommonModule,
     RouterModule,
     ReactiveFormsModule,
-    CarouselComponent,
     ActivityDetailInfoComponent,
     CommentComponent,
     DialogComponent,

@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, throwError, catchError } from 'rxjs';
+import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
+import { Observable, of, throwError, catchError, BehaviorSubject } from 'rxjs';
 import { delay, map, take } from 'rxjs/operators';
 import { Activity, ActivityService } from './activity.service';
 import { AuthService } from './auth.service';
 import { UserService } from './user.service';
+import { isPlatformBrowser } from '@angular/common';
 
 export interface GroupMember {
   email: string;
@@ -36,7 +37,8 @@ export interface Group {
   providedIn: 'root',
 })
 export class GroupService {
-  private readonly GROUPS_KEY = 'user-groups';
+  private readonly GROUPS_KEY = 'user_groups';
+  private isBrowser: boolean;
 
   // Mock groups for initial data
   private mockGroups: Group[] = [
@@ -87,18 +89,41 @@ export class GroupService {
   constructor(
     private authService: AuthService,
     private userService: UserService,
-    private activityService: ActivityService
+    private activityService: ActivityService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
     // Initialize groups in localStorage if not exists
-    this.initializeGroups();
+    this.initGroups();
+  }
+
+  /**
+   * Safely get item from localStorage (only in browser)
+   */
+  private getLocalStorage(key: string): string | null {
+    if (this.isBrowser) {
+      return localStorage.getItem(key);
+    }
+    return null;
+  }
+
+  /**
+   * Safely set item in localStorage (only in browser)
+   */
+  private setLocalStorage(key: string, value: string): void {
+    if (this.isBrowser) {
+      localStorage.setItem(key, value);
+    }
   }
 
   /**
    * Initialize groups in localStorage if not exists
    */
-  private initializeGroups(): void {
-    if (!localStorage.getItem(this.GROUPS_KEY)) {
-      localStorage.setItem(this.GROUPS_KEY, JSON.stringify(this.mockGroups));
+  private initGroups(): void {
+    if (!this.isBrowser) return;
+
+    if (!this.getLocalStorage(this.GROUPS_KEY)) {
+      this.setLocalStorage(this.GROUPS_KEY, JSON.stringify(this.mockGroups));
     }
   }
 
@@ -121,7 +146,7 @@ export class GroupService {
         }
 
         console.log(`Getting groups for user: ${currentUser.email}`);
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
 
         if (!groups || !Array.isArray(groups)) {
           console.error(
@@ -148,11 +173,16 @@ export class GroupService {
           );
 
           // Check if any activities have plannedDate
-          const activitiesWithDates = group.activities.filter(
-            (a) => a.plannedDate
-          );
+          const plannedActivities = group.activities
+            .filter((activity: GroupActivity) => activity.plannedDate)
+            .sort((a: GroupActivity, b: GroupActivity) => {
+              return (
+                new Date(a.plannedDate!).getTime() -
+                new Date(b.plannedDate!).getTime()
+              );
+            });
           console.log(
-            `- Activities with planned dates: ${activitiesWithDates.length}`
+            `- Activities with planned dates: ${plannedActivities.length}`
           );
         });
 
@@ -185,7 +215,7 @@ export class GroupService {
       map((currentUser) => {
         if (!currentUser) return [];
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         return groups.filter((group) => group.owner === currentUser.email);
       }),
       delay(300) // Simulate API delay
@@ -206,7 +236,7 @@ export class GroupService {
       map((currentUser) => {
         if (!currentUser) return [];
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         return groups.filter(
           (group) =>
             group.members.includes(currentUser.email) &&
@@ -221,7 +251,7 @@ export class GroupService {
    * Get a specific group by ID
    */
   getGroupById(groupId: string): Observable<Group | null> {
-    const groups = this.getGroupsFromStorage();
+    const groups = this.getGroups();
     const group = groups.find((g) => g.id === groupId);
 
     if (!group) {
@@ -250,7 +280,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
 
         // Generate a unique ID
         const newId = this.generateUniqueId();
@@ -271,7 +301,7 @@ export class GroupService {
         groups.push(newGroup);
 
         // Save to localStorage
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return newGroup;
       }),
@@ -295,7 +325,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         const groupIndex = groups.findIndex((g) => g.id === groupId);
 
         if (groupIndex === -1) {
@@ -323,7 +353,7 @@ export class GroupService {
         groups[groupIndex] = updatedGroup;
 
         // Save to localStorage
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return updatedGroup;
       }),
@@ -347,7 +377,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         const groupIndex = groups.findIndex((g) => g.id === groupId);
 
         if (groupIndex === -1) {
@@ -365,7 +395,7 @@ export class GroupService {
         groups.splice(groupIndex, 1);
 
         // Save to localStorage
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return true;
       }),
@@ -389,7 +419,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         const groupIndex = groups.findIndex((g) => g.id === groupId);
 
         if (groupIndex === -1) {
@@ -418,7 +448,7 @@ export class GroupService {
         groups[groupIndex] = group;
 
         // Save to localStorage
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return group;
       }),
@@ -442,7 +472,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         const groupIndex = groups.findIndex((g) => g.id === groupId);
 
         if (groupIndex === -1) {
@@ -477,7 +507,7 @@ export class GroupService {
         groups[groupIndex] = group;
 
         // Save to localStorage
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return group;
       }),
@@ -518,7 +548,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         const groupIndex = groups.findIndex((g) => g.id === groupId);
 
         if (groupIndex === -1) {
@@ -552,11 +582,12 @@ export class GroupService {
         }
 
         // Check if activity already exists in the group with the same date
-        const existingActivity = group.activities.find(
-          (a) => a.activityId === activityId && a.plannedDate === plannedDate
+        const existingActivityIndex = group.activities.findIndex(
+          (a: GroupActivity) =>
+            a.activityId === activityId && a.plannedDate === plannedDate
         );
 
-        if (existingActivity) {
+        if (existingActivityIndex !== -1) {
           throw new Error(
             'Activity already exists in this group with the same date'
           );
@@ -580,7 +611,7 @@ export class GroupService {
 
         // Update in storage
         groups[groupIndex] = group;
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return newGroupActivity;
       }),
@@ -619,7 +650,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         const groupIndex = groups.findIndex((g) => g.id === groupId);
 
         if (groupIndex === -1) {
@@ -637,7 +668,7 @@ export class GroupService {
 
         // Find the activity
         const activityIndex = group.activities.findIndex(
-          (a) => a.id === activityId
+          (a: GroupActivity) => a.id === activityId
         );
 
         if (activityIndex === -1) {
@@ -652,7 +683,7 @@ export class GroupService {
         groups[groupIndex] = group;
 
         // Save to localStorage
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return group;
       }),
@@ -676,7 +707,7 @@ export class GroupService {
           throw new Error('User not authenticated');
         }
 
-        const groups = this.getGroupsFromStorage();
+        const groups = this.getGroups();
         const groupIndex = groups.findIndex((g) => g.id === groupId);
 
         if (groupIndex === -1) {
@@ -694,7 +725,7 @@ export class GroupService {
 
         // Find activity
         const activityIndex = group.activities.findIndex(
-          (a) => a.id === activityId
+          (a: GroupActivity) => a.id === activityId
         );
 
         if (activityIndex === -1) {
@@ -709,7 +740,7 @@ export class GroupService {
         groups[groupIndex] = group;
 
         // Save to localStorage
-        localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
+        this.saveGroups(groups);
 
         return group;
       }),
@@ -725,7 +756,7 @@ export class GroupService {
     activityId: number,
     plannedDate: string | null
   ): boolean {
-    const groups = this.getGroupsFromStorage();
+    const groups = this.getGroups();
     const group = groups.find((g) => g.id === groupId);
 
     if (!group) {
@@ -733,16 +764,36 @@ export class GroupService {
     }
 
     return group.activities.some(
-      (a) => a.activityId === activityId && a.plannedDate === plannedDate
+      (a: GroupActivity) =>
+        a.activityId === activityId && a.plannedDate === plannedDate
     );
+  }
+
+  /**
+   * Helper: Save groups to localStorage
+   */
+  private saveGroups(groups: any[]): void {
+    if (!this.isBrowser) return;
+
+    // Save to localStorage
+    this.setLocalStorage(this.GROUPS_KEY, JSON.stringify(groups));
   }
 
   /**
    * Helper: Get groups from localStorage
    */
-  private getGroupsFromStorage(): Group[] {
-    const groupsJson = localStorage.getItem(this.GROUPS_KEY);
-    return groupsJson ? JSON.parse(groupsJson) : [];
+  private getGroups(): any[] {
+    if (!this.isBrowser) return [];
+
+    const groupsJson = this.getLocalStorage(this.GROUPS_KEY);
+    if (!groupsJson) return [];
+
+    try {
+      return JSON.parse(groupsJson);
+    } catch (e) {
+      console.error('Error parsing groups from localStorage:', e);
+      return [];
+    }
   }
 
   /**
