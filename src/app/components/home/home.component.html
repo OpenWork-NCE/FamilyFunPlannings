@@ -1,5 +1,5 @@
 <!-- Main Layout -->
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+<div class="min-h-screen bg-gray-900">
   <!-- Header -->
   <app-header></app-header>
 
@@ -8,59 +8,123 @@
     <!-- Title and Description -->
     <div class="text-center max-w-3xl mx-auto mb-10">
       <h1
-        class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4"
+        class="text-3xl md:text-4xl font-bold text-gray-100 mb-4"
       >
-        Explore Activities for the family and friend and enjoy at the right time
+        Explore Activities for the family and friends and enjoy at the right time
       </h1>
-      <p class="text-lg text-gray-600 dark:text-gray-400">
-        Plan fun activities with family and friends, perfectly timed for your
-        enjoyment.
+      <p class="text-lg text-gray-400">
+        Discover and plan fun activities perfectly timed for your family and friends.
       </p>
     </div>
-
-    <!-- Featured Activities Carousel -->
-    <section class="mb-12">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-        Activities of the Day
-      </h2>
-      <app-carousel
-        [activities]="activityService.featuredActivities()"
-        (favoriteToggle)="toggleFavorite($event)"
-      ></app-carousel>
-    </section>
 
     <!-- Search and Filter -->
     <section class="mb-8">
       <app-search-bar
-        (search)="onSearch($event)"
+        [selectedCity]="currentCity()"
+        (searchPerformed)="onSearch($event)"
+        (cityChange)="onCityChange($event)"
         (openFilter)="openFilter()"
+        (activitySelected)="onActivitySelected($event)"
       ></app-search-bar>
     </section>
 
+    <!-- Featured Activities Section (If Available) -->
+    <section *ngIf="featuredActivities().length > 0" class="mb-10">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">
+          Featured Activities
+        </h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <app-activity-card 
+          *ngFor="let activity of featuredActivities()"
+          [activity]="activity"
+          [featured]="true"
+          (favoriteToggle)="toggleFavorite($event)"
+        ></app-activity-card>
+      </div>
+    </section>
+
+    <!-- Error Message -->
+    <section *ngIf="hasError()" class="mb-8">
+      <div class="bg-red-900/30 border border-red-800 text-red-200 px-4 py-3 rounded relative" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline"> {{ error() }}</span>
+        <button 
+          class="absolute top-0 bottom-0 right-0 px-4 py-3"
+          (click)="refreshActivities()"
+        >
+          <svg class="h-6 w-6 fill-current text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 22c5.523 0 10-4.477 10-10h-2c0 4.418-3.582 8-8 8s-8-3.582-8-8c0-4.418 3.582-8 8-8v3l5-5-5-5v3C6.477 3 2 7.477 2 12s4.477 10 10 10z"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
     <!-- Activity List -->
-    <section>
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-        All Activities
-      </h2>
+    <section #activitySection>
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-100">
+          {{ 'Activities in ' + currentCity() }}
+        </h2>
+
+        <!-- Sorting Options -->
+        <div class="flex items-center" *ngIf="!isLoading() && filteredActivities().length > 0">
+          <label for="sort-select" class="text-sm text-gray-50 mr-2">Sort by:</label>
+          <select 
+            id="sort-select"
+            [value]="currentSort()"
+            (change)="onSortChange($event)"
+            class="bg-gray-800 border border-gray-700 rounded-md text-gray-50 text-sm py-1 px-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="newest">Newest</option>
+            <option value="rating">Highest Rated</option>
+            <option value="popularity">Most Popular</option>
+            <option value="alphabetical">A-Z</option>
+          </select>
+        </div>
+      </div>
+
       <app-activity-list
-        [activities]="activityService.filteredActivities()"
-        [loading]="isLoading"
+        [activities]="filteredActivities()"
+        [loading]="isLoading()"
+        [emptyStateMessage]="'No activities found in ' + currentCity() + '. Try searching for something else or changing filters.'"
+        [enablePagination]="true"
+        [enableSorting]="true"
+        [currentSort]="currentSort()"
         (favoriteToggle)="toggleFavorite($event)"
+        (pageChanged)="onPageChange($event)"
+        (sortChanged)="onSortChange($event)"
+        (activitySelected)="onActivitySelected($event)"
+        (refresh)="refreshActivities()"
       ></app-activity-list>
     </section>
+
+    <!-- Pull to Refresh Button (Mobile) -->
+    <div class="fixed bottom-20 right-4 md:hidden" *ngIf="!isLoading()">
+      <button 
+        (click)="refreshActivities()"
+        class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg"
+        aria-label="Refresh activities"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+    </div>
   </main>
 
   <!-- Footer (Desktop Only) -->
-  <app-footer></app-footer>
+  <app-footer class="hidden md:block"></app-footer>
 
   <!-- Bottom Navigation (Mobile Only) -->
   <app-bottom-nav></app-bottom-nav>
 
   <!-- Filter Modal -->
   <app-filter
-    [isOpen]="isFilterOpen"
-    [currentFilter]="activityService.currentFilter()"
-    (close)="closeFilter()"
+    [isOpen]="isFilterOpen()"
+    [currentFilter]="currentActivityFilter()"
+    (closeFilter)="closeFilter()"
     (applyFilter)="applyFilter($event)"
     (resetFilter)="resetFilter()"
   ></app-filter>

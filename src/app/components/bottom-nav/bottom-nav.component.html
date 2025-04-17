@@ -1,5 +1,5 @@
 <nav
-  class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 md:hidden z-50"
+  class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 md:hidden z-50"
 >
   <div class="grid grid-cols-4 h-16">
     <!-- Navigation Items -->
@@ -7,10 +7,8 @@
       <a
         [routerLink]="item.route"
         class="flex flex-col items-center justify-center"
-        [class.text-blue-600]="isActive(item.route)"
-        [class.text-gray-600]="!isActive(item.route)"
-        [class.dark:text-blue-400]="isActive(item.route)"
-        [class.dark:text-gray-400]="!isActive(item.route)"
+        [class.text-blue-400]="isActive(item.route)"
+        [class.text-gray-400]="!isActive(item.route)"
       >
         <!-- Icon -->
         <svg
@@ -85,10 +83,8 @@
       <a
         [routerLink]="['/login']"
         class="flex flex-col items-center justify-center"
-        [class.text-blue-600]="isActive('/login')"
-        [class.text-gray-600]="!isActive('/login')"
-        [class.dark:text-blue-400]="isActive('/login')"
-        [class.dark:text-gray-400]="!isActive('/login')"
+        [class.text-blue-400]="isActive('/login')"
+        [class.text-gray-400]="!isActive('/login')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -109,10 +105,8 @@
       <a
         [routerLink]="['/register']"
         class="flex flex-col items-center justify-center"
-        [class.text-blue-600]="isActive('/register')"
-        [class.text-gray-600]="!isActive('/register')"
-        [class.dark:text-blue-400]="isActive('/register')"
-        [class.dark:text-gray-400]="!isActive('/register')"
+        [class.text-blue-400]="isActive('/register')"
+        [class.text-gray-400]="!isActive('/register')"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

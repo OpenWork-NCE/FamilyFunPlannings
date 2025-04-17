@@ -17,7 +17,7 @@ export const JwtInterceptor: HttpInterceptorFn = (
   next: HttpHandlerFn
 ) => {
   const authService = inject(AuthService);
-  const token = authService.getToken();
+  const token = authService.getAccessToken();
 
   // Only add the Authorization header if a token exists
   if (token) {

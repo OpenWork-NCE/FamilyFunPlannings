@@ -1,7 +1,14 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+
+interface NavItem {
+  label: string;
+  icon: string;
+  route: string;
+  showInGuestMode: boolean;
+}
 
 @Component({
   selector: 'app-bottom-nav',
@@ -11,7 +18,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class BottomNavComponent {
   // Navigation items
-  navItems = [
+  navItems: NavItem[] = [
     { label: 'Home', icon: 'explore', route: '/home', showInGuestMode: true },
     {
       label: 'Activities',
@@ -45,10 +52,23 @@ export class BottomNavComponent {
     },
   ];
 
-  constructor(public authService: AuthService) {}
+  private isBrowser: boolean;
+
+  constructor(
+    public authService: AuthService,
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: object
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+  }
 
   // Get current route to highlight active item
   isActive(route: string): boolean {
+    // Make sure we're in the browser
+    if (!this.isBrowser) {
+      return false;
+    }
+    
     const currentPath = window.location.pathname;
 
     // Special case for root route
@@ -77,7 +97,7 @@ export class BottomNavComponent {
     // Profile routes
     if (
       route === '/profile' &&
-      (currentPath === '/profile' || currentPath === '/user-preferences')
+      (currentPath === '/profile' || currentPath === '/user-profile')
     ) {
       return true;
     }
@@ -105,7 +125,7 @@ export class BottomNavComponent {
   }
 
   // Get visible navigation items based on guest mode
-  getVisibleNavItems(): any[] {
+  getVisibleNavItems(): NavItem[] {
     if (this.authService.isGuest()) {
       return this.navItems.filter((item) => item.showInGuestMode);
     }

@@ -1,17 +1,23 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
+import { Subscription, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, filter, finalize } from 'rxjs/operators';
+
+import { WeatherService, WeatherData, ForecastData, Activity, DailyForecastItem } from '../../services/weather.service';
 import { HeaderComponent } from '../header/header.component';
 import { FooterComponent } from '../footer/footer.component';
 import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
-import {
-  WeatherService,
-  WeatherData,
-  ForecastData,
-  WeatherBasedActivity,
-} from '../../services/weather.service';
-import { Subscription, catchError, forkJoin, of } from 'rxjs';
+
+interface ForecastDay {
+  date: Date;
+  temp: number;
+  weather: {
+    description: string;
+    icon: string;
+  };
+}
 
 @Component({
   selector: 'app-weather',
@@ -20,24 +26,35 @@ import { Subscription, catchError, forkJoin, of } from 'rxjs';
     CommonModule,
     RouterModule,
     FormsModule,
+    ReactiveFormsModule,
     HeaderComponent,
     FooterComponent,
-    BottomNavComponent,
+    BottomNavComponent
   ],
   templateUrl: './weather.component.html',
-  styleUrl: './weather.component.css',
 })
 export class WeatherComponent implements OnInit, OnDestroy {
   currentWeather: WeatherData | null = null;
-  forecast: any[] = [];
-  activitySuggestions: WeatherBasedActivity[] = [];
+  forecast: ForecastDay[] = [];
+  activitySuggestions: Activity[] = [];
+  dailyForecast: DailyForecastItem[] = [];
 
-  isLoading = true;
+  // Separate loading states for different sections
+  loadingStates = {
+    weather: true,
+    forecast: true,
+    suggestions: true
+  };
   weatherError: string | null = null;
   forecastError: string | null = null;
   suggestionsError: string | null = null;
 
   selectedCity = 'Paris';
+  citySearchControl = new FormControl('');
+  showCitySearch = false;
+  filteredCities: string[] = [];
+  cityChangeInProgress = false;
+
   availableCities = [
     'Paris',
     'Lyon',
@@ -47,22 +64,83 @@ export class WeatherComponent implements OnInit, OnDestroy {
     'Strasbourg',
     'Nice',
     'Toulouse',
+    'Nantes',
+    'Montpellier',
+    'Rennes',
+    'Grenoble'
   ];
-
-  isDarkMode = false;
 
   private subscriptions: Subscription[] = [];
 
   constructor(private weatherService: WeatherService) {}
 
   ngOnInit(): void {
-    this.detectDarkMode();
     this.loadWeatherData();
+    this.setupCitySearch();
   }
 
   ngOnDestroy(): void {
     // Clean up subscriptions to prevent memory leaks
-    this.subscriptions.forEach((sub) => sub.unsubscribe());
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  /**
+   * Setup city search with debounce
+   */
+  setupCitySearch(): void {
+    const searchSub = this.citySearchControl.valueChanges.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      filter(value => value !== null && value.length > 2)
+    ).subscribe(value => {
+      if (value) {
+        this.filterCities(value);
+      } else {
+        this.filteredCities = [];
+      }
+    });
+
+    this.subscriptions.push(searchSub);
+  }
+
+  /**
+   * Filter cities based on search input
+   */
+  filterCities(search: string): void {
+    const searchLower = search.toLowerCase();
+    
+    // Filter from available cities
+    const filtered = this.availableCities.filter(
+      city => city.toLowerCase().includes(searchLower)
+    );
+    
+    // If exact match not found, add as a new option
+    const exactMatch = filtered.some(
+      city => city.toLowerCase() === searchLower
+    );
+    
+    if (!exactMatch && search.length > 2) {
+      filtered.push(search);
+    }
+    
+    this.filteredCities = filtered;
+  }
+
+  /**
+   * Toggle city search visibility
+   */
+  toggleCitySearch(): void {
+    this.showCitySearch = !this.showCitySearch;
+    if (this.showCitySearch) {
+      setTimeout(() => {
+        const input = document.getElementById('citySearch');
+        if (input) {
+          input.focus();
+        }
+      }, 100);
+    } else {
+      this.filteredCities = [];
+    }
   }
 
   /**
@@ -73,116 +151,191 @@ export class WeatherComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Detect if dark mode is enabled
-   */
-  detectDarkMode(): void {
-    // Check if the user prefers dark mode
-    this.isDarkMode =
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    // Listen for changes in color scheme preference
-    window
-      .matchMedia('(prefers-color-scheme: dark)')
-      .addEventListener('change', (event) => {
-        this.isDarkMode = event.matches;
-      });
-
-    // Also check if the document has a dark class (for manual toggles)
-    if (document.documentElement.classList.contains('dark')) {
-      this.isDarkMode = true;
-    }
-  }
-
-  /**
    * Load weather data for the selected city
    */
   loadWeatherData(): void {
-    this.isLoading = true;
+    // Set all loading states to true
+    this.loadingStates = {
+      weather: true,
+      forecast: true,
+      suggestions: true
+    };
+    
+    this.cityChangeInProgress = true;
     this.weatherError = null;
     this.forecastError = null;
     this.suggestionsError = null;
 
-    const weatherSub = forkJoin({
-      currentWeather: this.weatherService
-        .getCurrentWeather(this.selectedCity)
-        .pipe(
-          catchError((error) => {
-            this.weatherError = `Failed to load current weather: ${error.message}`;
-            console.error('Error loading current weather:', error);
-            return of(null);
-          })
-        ),
-      forecast: this.weatherService.getForecast(this.selectedCity).pipe(
-        catchError((error) => {
-          this.forecastError = `Failed to load forecast: ${error.message}`;
-          console.error('Error loading forecast:', error);
+    // Get current weather
+    const weatherSub = this.weatherService.getCurrentWeather(this.selectedCity)
+      .pipe(
+        catchError(error => {
+          this.weatherError = `Failed to load current weather: ${error.message}`;
+          console.error('[WeatherComponent] Error loading current weather:', error);
           return of(null);
+        }),
+        finalize(() => {
+          this.loadingStates.weather = false;
+          this.updateCityChangeStatus();
         })
-      ),
-    }).subscribe({
-      next: ({ currentWeather, forecast }) => {
-        this.isLoading = false;
-
-        if (currentWeather) {
-          this.currentWeather = currentWeather;
-
-          // Get activity suggestions based on current weather
-          this.loadActivitySuggestions(currentWeather);
+      )
+      .subscribe(weather => {
+        if (weather) {
+          this.currentWeather = weather;
+          
+          // Load forecast and activity suggestions after getting current weather
+          this.loadForecast();
+          this.loadActivitySuggestions();
         }
-
-        if (forecast) {
-          // Process forecast data to get daily forecasts
-          this.forecast = this.weatherService.getDailyForecasts(forecast);
-        }
-      },
-      error: (error) => {
-        this.isLoading = false;
-        console.error('Error loading weather data:', error);
-      },
-    });
+      });
 
     this.subscriptions.push(weatherSub);
   }
 
   /**
-   * Load activity suggestions based on current weather
+   * Load 5-day forecast data
    */
-  loadActivitySuggestions(weatherData: WeatherData): void {
-    const suggestionsSub = this.weatherService
-      .getActivitySuggestions(weatherData)
+  loadForecast(): void {
+    this.loadingStates.forecast = true;
+    
+    const forecastSub = this.weatherService.getForecast(this.selectedCity)
       .pipe(
-        catchError((error) => {
+        catchError(error => {
+          this.forecastError = `Failed to load forecast: ${error.message}`;
+          console.error('[WeatherComponent] Error loading forecast:', error);
+          return of(null);
+        }),
+        finalize(() => {
+          this.loadingStates.forecast = false;
+          this.updateCityChangeStatus();
+        })
+      )
+      .subscribe(forecastData => {
+        if (forecastData) {
+          // Process forecast data to show one entry per day
+          this.processForecastData(forecastData);
+        }
+      });
+
+    this.subscriptions.push(forecastSub);
+  }
+
+  /**
+   * Process forecast data to get one entry per day
+   */
+  processForecastData(data: ForecastData): void {
+    // Group forecast by day and get mid-day forecast for each day
+    const dailyMap = new Map<string, ForecastDay>();
+    
+    data.list.forEach(item => {
+      const date = new Date(item.dt * 1000);
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // If we already have an entry for this date, skip
+      // Unless this is a mid-day entry (12-15h) which we prefer
+      const hour = date.getHours();
+      const isMidDay = hour >= 12 && hour <= 15;
+      
+      if (!dailyMap.has(dateStr) || isMidDay) {
+        dailyMap.set(dateStr, {
+          date,
+          temp: item.main.temp,
+          weather: {
+            description: item.weather[0].description,
+            icon: item.weather[0].icon
+          }
+        });
+      }
+    });
+    
+    // Convert map to array and sort by date
+    this.forecast = Array.from(dailyMap.values())
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 5); // Limit to 5 days
+  }
+
+  /**
+   * Load activity suggestions based on weather
+   */
+  loadActivitySuggestions(): void {
+    this.loadingStates.suggestions = true;
+    
+    const suggestionsSub = this.weatherService.getActivitySuggestions(this.selectedCity)
+      .pipe(
+        catchError(error => {
           this.suggestionsError = `Failed to load activity suggestions: ${error.message}`;
-          console.error('Error loading activity suggestions:', error);
+          console.error('[WeatherComponent] Error loading activity suggestions:', error);
           return of([]);
+        }),
+        finalize(() => {
+          this.loadingStates.suggestions = false;
+          this.updateCityChangeStatus();
         })
       )
       .subscribe({
-        next: (suggestions) => {
-          this.activitySuggestions = suggestions.slice(0, 10); // Get top 10 suggestions
+        next: (response) => {
+          this.activitySuggestions = response;
         },
         error: (error) => {
-          console.error('Error loading activity suggestions:', error);
-        },
+          console.error('[WeatherComponent] Error processing activity suggestions:', error);
+        }
       });
 
     this.subscriptions.push(suggestionsSub);
   }
 
   /**
+   * Updates the city change status based on all loading states
+   */
+  private updateCityChangeStatus(): void {
+    const { weather, forecast, suggestions } = this.loadingStates;
+    if (!weather && !forecast && !suggestions) {
+      this.cityChangeInProgress = false;
+    }
+  }
+
+  /**
+   * Check if any section is loading
+   */
+  isAnyLoading(): boolean {
+    return this.loadingStates.weather || 
+           this.loadingStates.forecast || 
+           this.loadingStates.suggestions;
+  }
+
+  /**
    * Change the selected city and reload weather data
    */
   changeCity(city: string): void {
+    if (this.selectedCity === city) return;
+    
     this.selectedCity = city;
+    this.citySearchControl.setValue('');
+    this.showCitySearch = false;
+    this.filteredCities = [];
     this.loadWeatherData();
+  }
+
+  /**
+   * Search for a new city
+   */
+  searchCity(): void {
+    const city = this.citySearchControl.value;
+    if (city && city.length > 2) {
+      this.changeCity(city);
+      
+      // Add to available cities if not already there
+      if (!this.availableCities.includes(city)) {
+        this.availableCities.push(city);
+      }
+    }
   }
 
   /**
    * Get weather icon URL
    */
   getWeatherIconUrl(iconCode: string): string {
-    return this.weatherService.getWeatherIconUrl(iconCode);
+    return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
   }
 
   /**
@@ -192,7 +345,7 @@ export class WeatherComponent implements OnInit, OnDestroy {
     return date.toLocaleDateString('fr-FR', {
       weekday: 'long',
       day: 'numeric',
-      month: 'long',
+      month: 'long'
     });
   }
 
@@ -203,30 +356,52 @@ export class WeatherComponent implements OnInit, OnDestroy {
     const date = new Date(timestamp * 1000);
     return date.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
-      minute: '2-digit',
+      minute: '2-digit'
     });
   }
 
   /**
-   * Get suitability class based on score
+   * Get formatted temperature with unit
    */
-  getSuitabilityClass(score: number): string {
-    if (score >= 80)
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    if (score >= 60)
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-    if (score >= 40)
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+  formatTemperature(temp: number): string {
+    return `${Math.round(temp)}°C`;
   }
 
   /**
-   * Get suitability text based on score
+   * Capitalize first letter of each word
    */
-  getSuitabilityText(score: number): string {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Bon';
-    if (score >= 40) return 'Moyen';
-    return 'Peu recommandé';
+  capitalize(text: string): string {
+    return text.replace(/\b\w/g, match => match.toUpperCase());
+  }
+  
+  /**
+   * Get formatted price display for an activity
+   */
+  getActivityPrice(activity: Activity): string {
+    if (!activity.filters?.price) return 'Price varies';
+    
+    const priceMap: Record<string, string> = {
+      'free': 'Free',
+      'paid': 'Paid',
+      'unknown': 'Varies'
+    };
+    
+    return priceMap[activity.filters.price] || 'Price varies';
+  }
+
+  /**
+   * Get formatted accessibility display for an activity
+   */
+  getActivityAccessibility(activity: Activity): string {
+    if (!activity.filters?.accessibility) return 'Accessibility unknown';
+    
+    const accessibilityMap: Record<string, string> = {
+      'full': 'Fully Accessible',
+      'limited': 'Limited Access',
+      'none': 'Not Accessible',
+      'unknown': 'Accessibility Unknown'
+    };
+    
+    return accessibilityMap[activity.filters.accessibility] || 'Accessibility unknown';
   }
 }

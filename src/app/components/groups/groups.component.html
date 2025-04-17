@@ -4,10 +4,10 @@
   <!-- Header -->
   <app-header></app-header>
 
-  <div class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="flex-grow w-full container mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Page Header -->
     <div class="text-center mb-12">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <h1 class="text-3xl font-bold text-white mb-2">
         My Groups
       </h1>
       <p class="text-lg text-gray-300/90">
@@ -195,10 +195,12 @@
           *ngIf="ownedGroups.length > 0"
           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          <div
+          <button
             *ngFor="let group of ownedGroups"
-            class="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+            class="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 text-left w-full"
             (click)="navigateToGroupDetails(group)"
+            (keydown.enter)="navigateToGroupDetails(group)"
+            tabindex="0"
           >
             <div class="p-6">
               <div class="flex justify-between items-start mb-4">
@@ -247,14 +249,14 @@
                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                     />
                   </svg>
-                  {{ group.activities.length }}
+                  {{ groupActivities?.length || 0 }}
                 </div>
               </div>
             </div>
             <div
               class="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
             ></div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -288,10 +290,12 @@
           *ngIf="addedGroups.length > 0"
           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          <div
+          <button
             *ngFor="let group of addedGroups"
-            class="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+            class="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 text-left w-full"
             (click)="navigateToGroupDetails(group)"
+            (keydown.enter)="navigateToGroupDetails(group)"
+            tabindex="0"
           >
             <div class="p-6">
               <div class="flex justify-between items-start mb-4">
@@ -321,10 +325,10 @@
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       stroke-width="2"
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                     />
                   </svg>
-                  {{ group.members.length }}
+                  {{ groupActivities?.length || 0 }}
                 </div>
                 <div class="flex items-center">
                   <svg
@@ -340,14 +344,14 @@
                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                     />
                   </svg>
-                  {{ group.activities.length }}
+                  0
                 </div>
               </div>
             </div>
             <div
               class="h-1 w-full bg-gradient-to-r from-indigo-500 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
             ></div>
-          </div>
+          </button>
         </div>
       </div>
     </div>
@@ -447,7 +451,7 @@
             <div>
               <p class="text-sm text-gray-400">Created</p>
               <p class="font-medium text-white">
-                {{ formatDate(currentGroup.createdAt) }}
+                {{ formatDate(currentGroup.createdDate) }}
               </p>
             </div>
           </div>
@@ -467,7 +471,7 @@
             </svg>
             <div>
               <p class="text-sm text-gray-400">Owner</p>
-              <p class="font-medium text-white">{{ currentGroup.owner }}</p>
+              <p class="font-medium text-white">{{ currentGroup.creator.email }}</p>
             </div>
           </div>
         </div>
@@ -543,12 +547,12 @@
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                 >
-                  Email
+                  Role
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
                 >
-                  Role
+                  Email
                 </th>
                 <th
                   *ngIf="isGroupOwner(currentGroup)"
@@ -559,23 +563,23 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-700/50">
-              <tr *ngFor="let memberEmail of currentGroup.members">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {{ memberEmail }}
-                </td>
+              <tr *ngFor="let member of currentGroup.members">
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <span
-                    *ngIf="memberEmail === currentGroup.owner"
+                    *ngIf="member.email === currentGroup.creator.email"
                     class="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-full"
                   >
                     Owner
                   </span>
                   <span
-                    *ngIf="memberEmail !== currentGroup.owner"
+                    *ngIf="member.email !== currentGroup.creator.email"
                     class="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs font-medium rounded-full"
                   >
                     Member
                   </span>
+                </td>
+                <td class="text-gray-50 x-6 py-4 whitespace-nowrap">
+                  {{ member.email }}
                 </td>
                 <td
                   *ngIf="isGroupOwner(currentGroup)"
@@ -583,10 +587,10 @@
                 >
                   <button
                     *ngIf="
-                      memberEmail !== currentGroup.owner &&
-                      memberEmail !== getUserEmail()
+                      member.email !== currentGroup.creator.email &&
+                      member.email !== getUserEmail()
                     "
-                    (click)="onRemoveMember(memberEmail)"
+                    (click)="onRemoveMember(member.email)"
                     class="text-red-400 hover:text-red-300 transition-colors duration-200"
                   >
                     Remove
@@ -602,12 +606,12 @@
       <div *ngIf="groupDetailsTab === 'activities'" class="space-y-4">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold text-white">
-            Activities ({{ currentGroup.activities.length }})
+            Activities ({{ groupActivities.length }})
           </h3>
           <button
             *ngIf="isGroupOwner(currentGroup)"
             (click)="openAddActivityModal()"
-            class="text-sm text-blue-600 font-medium hover:text-blue-500 focus:outline-none focus:underline transition-colors"
+            class="flex items-center px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             Add Activity
           </button>
@@ -620,7 +624,7 @@
         </div>
 
         <div
-          *ngIf="currentGroup.activities.length === 0"
+          *ngIf="groupActivities.length === 0"
           class="text-center py-8 bg-gray-50 rounded-lg border border-gray-200"
         >
           <p class="text-gray-500">No activities yet.</p>
@@ -639,11 +643,14 @@
           </p>
         </div>
 
-        <div *ngIf="currentGroup.activities.length > 0" class="space-y-4">
+        <div *ngIf="groupActivities.length > 0" class="space-y-4">
           <div
-            *ngFor="let activity of currentGroup.activities"
+            *ngFor="let activity of groupActivities"
             class="relative overflow-hidden border border-gray-200 rounded-xl p-0 bg-white hover:shadow-lg transition-all duration-300 cursor-pointer group"
             (click)="navigateToActivityDetails(activity)"
+            (keydown.enter)="navigateToActivityDetails(activity)"
+            tabindex="0"
+            role="button"
           >
             <!-- Activity Card Content -->
             <div class="flex flex-col md:flex-row">
@@ -688,7 +695,7 @@
                   *ngIf="getActivityImage(activity)"
                   class="absolute bottom-2 left-2 right-2 text-center text-xs font-medium text-white bg-black/30 py-1 px-2 rounded"
                 >
-                  {{ activity.title }}
+                  {{ activity.activity?.city }}
                 </div>
               </div>
 
@@ -700,7 +707,7 @@
                     <h4
                       class="font-bold text-gray-900 text-xl flex items-center group-hover:text-blue-600 transition-colors"
                     >
-                      {{ activity.title }}
+                      {{ activity.activity?.name }}
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         class="h-5 w-5 ml-2 text-blue-500 transform group-hover:translate-x-1 transition-transform"
@@ -719,13 +726,13 @@
 
                     <!-- Description -->
                     <p class="text-gray-600 mt-2 line-clamp-2">
-                      {{ activity.description }}
+                      {{ activity.activity?.subcategories?.[0] || '' }}
                     </p>
 
                     <!-- Activity details grid -->
                     <div class="mt-4 grid grid-cols-2 gap-4">
                       <div
-                        *ngIf="activity.plannedDate"
+                        *ngIf="activity.plannedDateStart"
                         class="flex items-start"
                       >
                         <svg
@@ -747,11 +754,11 @@
                             >Scheduled Date</span
                           >
                           <span class="text-sm font-medium text-gray-700">{{
-                            formatDate(activity.plannedDate)
+                            formatDate(activity.plannedDateStart)
                           }}</span>
                         </div>
                       </div>
-                      <div *ngIf="activity.location" class="flex items-start">
+                      <div *ngIf="activity.meetingPoint" class="flex items-start">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           class="h-5 w-5 mr-2 text-blue-500 flex-shrink-0"
@@ -774,10 +781,10 @@
                         </svg>
                         <div>
                           <span class="text-xs text-gray-500 block"
-                            >Location</span
+                            >Meeting Point</span
                           >
                           <span class="text-sm font-medium text-gray-700">{{
-                            activity.location
+                            activity.meetingPoint
                           }}</span>
                         </div>
                       </div>
@@ -785,7 +792,7 @@
 
                     <!-- Added by info -->
                     <div class="mt-4 text-xs text-gray-500">
-                      Added by: {{ activity.addedBy }}
+                      Added by: {{ activity.addedBy?.email || 'Unknown' }}
                     </div>
                   </div>
 
@@ -1135,19 +1142,17 @@
         >
           <div>
             <p class="font-medium text-gray-900">
-              {{ user.name || user.email }}
+              {{ user.firstName || user.email }}
             </p>
             <p class="text-sm text-gray-500">{{ user.email }}</p>
           </div>
           <button
             (click)="onAddMember(user.email)"
             class="bg-blue-600 text-white rounded-lg px-3 py-1 text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            [disabled]="
-              currentGroup && currentGroup.members.includes(user.email)
-            "
+            [disabled]="isUserInGroup(user.email)"
           >
             {{
-              currentGroup && currentGroup.members.includes(user.email)
+              isUserInGroup(user.email)
                 ? "Added"
                 : "Add"
             }}
@@ -1188,6 +1193,23 @@
     (ngSubmit)="onAddActivity()"
     class="space-y-6"
   >
+    <!-- City Selection -->
+    <div>
+      <label for="city" class="block text-lg font-medium text-white mb-1"
+        >City</label
+      >
+      <select
+        id="city"
+        formControlName="city"
+        (change)="onCityChange($event)"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+      >
+        <option *ngFor="let city of availableCities" [value]="city">
+          {{ city }}
+        </option>
+      </select>
+    </div>
+
     <!-- Activity Selection -->
     <div>
       <label for="activityId" class="block text-lg font-medium text-white mb-1"
@@ -1204,7 +1226,7 @@
       >
         <option value="" disabled selected>Choose an activity</option>
         <option *ngFor="let activity of activities" [value]="activity.id">
-          {{ activity.title }} - {{ activity.category.join(", ") }}
+          {{ activity.name }} - {{ activity.categories.join(", ") }}
         </option>
       </select>
       <div
@@ -1215,32 +1237,95 @@
       </div>
     </div>
 
-    <!-- Scheduled Date -->
+    <!-- Start Date & Time -->
     <div>
       <label
-        for="scheduledDate"
+        for="plannedDateStart"
         class="block text-lg font-medium text-white mb-1"
-        >Scheduled Date & Time</label
+        >Start Date & Time</label
       >
       <input
-        id="scheduledDate"
+        id="plannedDateStart"
         type="datetime-local"
-        formControlName="scheduledDate"
+        formControlName="plannedDateStart"
         class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
         [ngClass]="{
-          'border-red-500': hasError(activityForm, 'scheduledDate'),
-          'border-gray-600': !hasError(activityForm, 'scheduledDate')
+          'border-red-500': hasError(activityForm, 'plannedDateStart'),
+          'border-gray-600': !hasError(activityForm, 'plannedDateStart')
         }"
       />
       <div
-        *ngIf="hasError(activityForm, 'scheduledDate')"
+        *ngIf="hasError(activityForm, 'plannedDateStart')"
         class="text-red-500 text-sm mt-1"
       >
-        Please select a valid date and time
+        Please select a valid start date and time
       </div>
-      <p class="text-sm text-gray-300 mt-1">
-        The scheduled date must be today or in the future
-      </p>
+    </div>
+
+    <!-- End Date & Time -->
+    <div>
+      <label
+        for="plannedDateEnd"
+        class="block text-lg font-medium text-white mb-1"
+        >End Date & Time</label
+      >
+      <input
+        id="plannedDateEnd"
+        type="datetime-local"
+        formControlName="plannedDateEnd"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+        [ngClass]="{
+          'border-red-500': hasError(activityForm, 'plannedDateEnd'),
+          'border-gray-600': !hasError(activityForm, 'plannedDateEnd')
+        }"
+      />
+      <div
+        *ngIf="hasError(activityForm, 'plannedDateEnd')"
+        class="text-red-500 text-sm mt-1"
+      >
+        Please select a valid end date and time
+      </div>
+    </div>
+
+    <!-- All Day Event -->
+    <div class="flex items-center">
+      <input
+        id="allDayEvent"
+        type="checkbox"
+        formControlName="allDayEvent"
+        class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-600 rounded bg-gray-700"
+      />
+      <label for="allDayEvent" class="ml-2 text-white">All day event</label>
+    </div>
+
+    <!-- Additional Info -->
+    <div>
+      <label
+        for="additionalInfo"
+        class="block text-lg font-medium text-white mb-1"
+        >Additional Information (optional)</label
+      >
+      <textarea
+        id="additionalInfo"
+        formControlName="additionalInfo"
+        rows="3"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+      ></textarea>
+    </div>
+
+    <!-- Meeting Point -->
+    <div>
+      <label
+        for="meetingPoint"
+        class="block text-lg font-medium text-white mb-1"
+        >Meeting Point (optional)</label
+      >
+      <input
+        id="meetingPoint"
+        type="text"
+        formControlName="meetingPoint"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+      />
     </div>
 
     <!-- Submit Button -->
@@ -1284,4 +1369,385 @@
       </button>
     </div>
   </form>
+</app-dialog>
+
+<!-- Delete Group Confirmation Dialog -->
+<app-dialog
+  [showDialog]="showDeleteGroupDialog"
+  [title]="'Delete Group'"
+  [size]="'sm'"
+  (closeDialog)="closeModal('delete')"
+>
+  <div class="space-y-6">
+    <div class="p-4 bg-red-900/30 border border-red-400 rounded-lg">
+      <p class="text-red-200 font-medium">
+        Are you sure you want to delete the group "{{ currentGroup?.name }}"?
+      </p>
+      <p class="text-red-300 mt-2 text-sm">
+        This action cannot be undone. All activities in this group will be removed.
+      </p>
+    </div>
+
+    <div class="flex justify-end space-x-3">
+      <button
+        type="button"
+        (click)="cancelDeleteGroup()"
+        class="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        [disabled]="isSubmitting"
+        (click)="confirmDeleteGroup()"
+        class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <span *ngIf="isSubmitting" class="flex items-center justify-center">
+          <svg
+            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          Deleting...
+        </span>
+        <span *ngIf="!isSubmitting" class="flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 mr-1.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
+          </svg>
+          Delete Group
+        </span>
+      </button>
+    </div>
+  </div>
+</app-dialog>
+
+<!-- Add Edit Activity Dialog -->
+<app-dialog
+  [showDialog]="showEditActivityDialog"
+  [title]="'Edit Activity'"
+  [size]="'md'"
+  (closeDialog)="closeModal('edit-activity')"
+>
+  <form
+    *ngIf="currentActivity"
+    [formGroup]="editActivityForm"
+    (ngSubmit)="onConfirmUpdateActivity()"
+    class="space-y-6"
+  >
+    <!-- Start Date & Time -->
+    <div>
+      <label
+        for="edit-plannedDateStart"
+        class="block text-lg font-medium text-white mb-1"
+        >Start Date & Time</label
+      >
+      <input
+        id="edit-plannedDateStart"
+        type="datetime-local"
+        formControlName="plannedDateStart"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+        [ngClass]="{
+          'border-red-500': hasError(editActivityForm, 'plannedDateStart'),
+          'border-gray-600': !hasError(editActivityForm, 'plannedDateStart')
+        }"
+      />
+      <div
+        *ngIf="hasError(editActivityForm, 'plannedDateStart')"
+        class="text-red-500 text-sm mt-1"
+      >
+        Please select a valid start date and time
+      </div>
+    </div>
+
+    <!-- End Date & Time -->
+    <div>
+      <label
+        for="edit-plannedDateEnd"
+        class="block text-lg font-medium text-white mb-1"
+        >End Date & Time</label
+      >
+      <input
+        id="edit-plannedDateEnd"
+        type="datetime-local"
+        formControlName="plannedDateEnd"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+        [ngClass]="{
+          'border-red-500': hasError(editActivityForm, 'plannedDateEnd'),
+          'border-gray-600': !hasError(editActivityForm, 'plannedDateEnd')
+        }"
+      />
+      <div
+        *ngIf="hasError(editActivityForm, 'plannedDateEnd')"
+        class="text-red-500 text-sm mt-1"
+      >
+        Please select a valid end date and time
+      </div>
+    </div>
+
+    <!-- All Day Event -->
+    <div class="flex items-center">
+      <input
+        id="edit-allDayEvent"
+        type="checkbox"
+        formControlName="allDayEvent"
+        class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-600 rounded bg-gray-700"
+      />
+      <label for="edit-allDayEvent" class="ml-2 text-white">All day event</label>
+    </div>
+
+    <!-- Additional Info -->
+    <div>
+      <label
+        for="edit-additionalInfo"
+        class="block text-lg font-medium text-white mb-1"
+        >Additional Information (optional)</label
+      >
+      <textarea
+        id="edit-additionalInfo"
+        formControlName="additionalInfo"
+        rows="3"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+      ></textarea>
+    </div>
+
+    <!-- Meeting Point -->
+    <div>
+      <label
+        for="edit-meetingPoint"
+        class="block text-lg font-medium text-white mb-1"
+        >Meeting Point (optional)</label
+      >
+      <input
+        id="edit-meetingPoint"
+        type="text"
+        formControlName="meetingPoint"
+        class="w-full px-6 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700/50 border-gray-600 text-white"
+      />
+    </div>
+
+    <!-- Submit Button -->
+    <div class="flex justify-end space-x-3">
+      <button
+        type="button"
+        (click)="closeModal('edit-activity')"
+        class="px-6 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        [disabled]="editActivityForm.invalid || isSubmitting"
+        class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <span *ngIf="isSubmitting" class="flex items-center justify-center">
+          <svg
+            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          Updating...
+        </span>
+        <span *ngIf="!isSubmitting">Update Activity</span>
+      </button>
+    </div>
+  </form>
+</app-dialog>
+
+<!-- Delete Activity Confirmation Dialog -->
+<app-dialog
+  [showDialog]="showDeleteActivityDialog"
+  [title]="'Delete Activity'"
+  [size]="'sm'"
+  (closeDialog)="closeModal('delete-activity')"
+>
+  <div class="space-y-6">
+    <div class="p-4 bg-red-900/30 border border-red-400 rounded-lg">
+      <p class="text-red-200 font-medium">
+        Are you sure you want to delete this activity?
+      </p>
+      <p class="text-red-300 mt-2 text-sm">
+        This action cannot be undone.
+      </p>
+    </div>
+
+    <div class="flex justify-end space-x-3">
+      <button
+        type="button"
+        (click)="cancelDeleteActivity()"
+        class="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        [disabled]="isSubmitting"
+        (click)="onConfirmDeleteActivity()"
+        class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <span *ngIf="isSubmitting" class="flex items-center justify-center">
+          <svg
+            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          Deleting...
+        </span>
+        <span *ngIf="!isSubmitting" class="flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 mr-1.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
+          </svg>
+          Delete Activity
+        </span>
+      </button>
+    </div>
+  </div>
+</app-dialog>
+
+<!-- Add Delete Member Confirmation Dialog -->
+<app-dialog
+  [showDialog]="showDeleteMemberDialog"
+  [title]="'Remove Member'"
+  [size]="'sm'"
+  (closeDialog)="cancelRemoveMember()"
+>
+  <div class="space-y-6">
+    <div class="p-4 bg-red-900/30 border border-red-400 rounded-lg">
+      <p class="text-red-200 font-medium">
+        Are you sure you want to remove {{ memberToRemove?.email }} from the group?
+      </p>
+      <p class="text-red-300 mt-2 text-sm">
+        This action will revoke their access to group activities and events.
+      </p>
+    </div>
+
+    <div class="flex justify-end space-x-3">
+      <button
+        type="button"
+        (click)="cancelRemoveMember()"
+        class="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        [disabled]="isSubmitting"
+        (click)="onConfirmRemoveMember()"
+        class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <span *ngIf="isSubmitting" class="flex items-center justify-center">
+          <svg
+            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          Removing...
+        </span>
+        <span *ngIf="!isSubmitting" class="flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 mr-1.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-4 4m0 0l-4-4m4 4V3"
+            />
+          </svg>
+          Remove Member
+        </span>
+      </button>
+    </div>
+  </div>
 </app-dialog>

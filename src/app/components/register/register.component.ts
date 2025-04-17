@@ -17,6 +17,47 @@ import { AuthService, RegistrationData } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './register.component.html',
+  styles: [`
+    @keyframes blob {
+      0% {
+        transform: translate(0px, 0px) scale(1);
+      }
+      33% {
+        transform: translate(30px, -50px) scale(1.1);
+      }
+      66% {
+        transform: translate(-20px, 20px) scale(0.9);
+      }
+      100% {
+        transform: translate(0px, 0px) scale(1);
+      }
+    }
+    
+    .animate-blob {
+      animation: blob 7s infinite;
+    }
+    
+    .animation-delay-2000 {
+      animation-delay: 2s;
+    }
+    
+    .animation-delay-4000 {
+      animation-delay: 4s;
+    }
+    
+    @keyframes fade-in {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+    
+    .animate-fade-in {
+      animation: fade-in 0.5s ease-out;
+    }
+  `]
 })
 export class RegisterComponent implements OnInit {
   // Registration form group
@@ -70,10 +111,10 @@ export class RegisterComponent implements OnInit {
     this.registerForm = this.formBuilder.group(
       {
         email: ['', [Validators.required, Validators.email]],
-        motDePasse: ['', [Validators.required, Validators.minLength(6)]],
+        password: ['', [Validators.required, Validators.minLength(6)]],
         confirmPassword: ['', [Validators.required]],
         // Role is set to USER by default and not shown in the form
-        role: ['USER'],
+        role: [['user']]
       },
       {
         validators: this.passwordMatchValidator,
@@ -87,7 +128,7 @@ export class RegisterComponent implements OnInit {
       }
 
       // Check password strength when password changes
-      const password = this.registerForm.get('motDePasse')?.value;
+      const password = this.registerForm.get('password')?.value;
       if (password) {
         this.checkPasswordStrength(password);
       }
@@ -100,7 +141,7 @@ export class RegisterComponent implements OnInit {
   private passwordMatchValidator: ValidatorFn = (
     control: AbstractControl
   ): ValidationErrors | null => {
-    const password = control.get('motDePasse');
+    const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');
 
     if (
@@ -164,6 +205,7 @@ export class RegisterComponent implements OnInit {
    * Handle form submission
    */
   onSubmit(): void {
+    console.log('Form submission started');
     // Set form as submitted
     this.formSubmitted = true;
 
@@ -173,6 +215,7 @@ export class RegisterComponent implements OnInit {
 
     // Check if form is valid
     if (this.registerForm.invalid) {
+      console.log('Form is invalid:', this.registerForm.errors);
       // Mark all fields as touched to trigger validation messages
       this.markFormGroupTouched(this.registerForm);
       return;
@@ -180,36 +223,38 @@ export class RegisterComponent implements OnInit {
 
     // Set submitting flag
     this.isSubmitting = true;
+    console.log('Setting isSubmitting to true');
 
     // Get form values and remove confirmPassword
     const formData = { ...this.registerForm.value };
     delete formData.confirmPassword;
 
     const registrationData: RegistrationData = formData;
+    console.log('Sending registration data:', registrationData);
 
     // Call auth service to register
     this.authService.register(registrationData).subscribe({
-      next: () => {
-        // Show success message
-        this.successMessage =
-          'Registration successful! Redirecting to login...';
-
+      next: (response) => {
+        console.log('Registration successful with response:', response);
+        // Show success message with verification instruction
+        this.successMessage = response.message || 'Registration successful! Please check your email to verify your account.';
+        
         // Reset form
         this.registerForm.reset();
         this.formSubmitted = false;
-
+        
         // Reset submitting flag
         this.isSubmitting = false;
-
-        // Redirect to login page after a short delay
+        
+        // After successful registration, redirect to login page after a short delay
         setTimeout(() => {
           this.router.navigate(['/login']);
-        }, 2000);
+        }, 3000);
       },
-      error: (error: any) => {
+      error: (error) => {
+        console.error('Registration error:', error);
         // Set error message and reset submitting flag
-        this.errorMessage =
-          error.message || 'Registration failed. Please try again.';
+        this.errorMessage = error.message || 'Registration failed. Please try again.';
         this.isSubmitting = false;
       },
     });
@@ -277,7 +322,7 @@ export class RegisterComponent implements OnInit {
       return 'Please enter a valid email address';
     }
 
-    if (controlName === 'motDePasse' && control.errors?.['minlength']) {
+    if (controlName === 'password' && control.errors?.['minlength']) {
       return 'Password must be at least 6 characters long';
     }
 
@@ -292,7 +337,7 @@ export class RegisterComponent implements OnInit {
   }
 
   /**
-   * Get the CSS class for the password strength indicator
+   * Get CSS class for password strength indicator
    * @returns CSS class string
    */
   getPasswordStrengthClass(): string {
@@ -303,6 +348,46 @@ export class RegisterComponent implements OnInit {
     } else {
       return 'bg-green-500';
     }
+  }
+
+  /**
+   * Check if password meets minimum length requirement
+   */
+  hasMinLength(password?: string): boolean {
+    const pwd = password ?? this.registerForm.get('password')?.value;
+    return pwd?.length >= 8;
+  }
+
+  /**
+   * Check if password contains uppercase letter
+   */
+  hasUppercase(password?: string): boolean {
+    const pwd = password ?? this.registerForm.get('password')?.value;
+    return /[A-Z]/.test(pwd || '');
+  }
+
+  /**
+   * Check if password contains lowercase letter
+   */
+  hasLowercase(password?: string): boolean {
+    const pwd = password ?? this.registerForm.get('password')?.value;
+    return /[a-z]/.test(pwd || '');
+  }
+
+  /**
+   * Check if password contains a number
+   */
+  hasNumber(password?: string): boolean {
+    const pwd = password ?? this.registerForm.get('password')?.value;
+    return /[0-9]/.test(pwd || '');
+  }
+
+  /**
+   * Check if password contains a special character
+   */
+  hasSpecialChar(password?: string): boolean {
+    const pwd = password ?? this.registerForm.get('password')?.value;
+    return /[^A-Za-z0-9]/.test(pwd || '');
   }
 
   /**

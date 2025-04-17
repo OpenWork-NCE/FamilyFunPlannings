@@ -1,253 +1,228 @@
-<!-- Desktop Header -->
-<header
-  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 hidden md:block bg-blue-900 text-white"
-  [class.shadow-md]="isScrolled"
->
+<!-- Modern Animated Header -->
+<header 
+  class="fixed w-full top-0 z-50 transition-all duration-300" 
+  [ngClass]="{
+    'bg-gray-900/90': isScrolled, 
+    'backdrop-blur-md': isScrolled,
+    'shadow-lg': isScrolled
+  }">
+  
+  <!-- Background animated blobs for visual interest -->
+  <div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+    <div class="absolute -top-32 -left-40 w-80 h-80 bg-indigo-600/20 rounded-full filter blur-3xl opacity-30 animate-blob"></div>
+    <div class="absolute -bottom-20 right-0 w-60 h-60 bg-blue-600/20 rounded-full filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+  </div>
+  
   <div class="container mx-auto px-4">
-    <div class="flex items-center justify-between h-16">
-      <!-- Left Side: Logo and Navigation -->
-      <div class="flex items-center space-x-8">
-        <!-- Logo -->
-        <a routerLink="/home" class="flex items-center">
-          <span class="text-xl font-bold text-white">FamilyFunPlanner</span>
-        </a>
-
-        <!-- Navigation Links -->
-        <nav class="hidden md:flex space-x-6">
-          <a
-            routerLink="/activities"
-            class="text-white hover:text-blue-200 transition-colors"
-          >
-            Activities
+    <div class="flex items-center justify-between h-16 md:h-20">
+      <div class="flex">
+        <!-- Logo Area -->
+        <div class="flex items-center">
+          <a routerLink="/home" class="flex items-center group">
+            <!-- You can add an SVG logo here if you have one -->
+            <span class="text-xl md:text-2xl font-bold text-white tracking-tight group-hover:text-indigo-400 transition-colors">
+              FamilyFunPlannings
+            </span>
           </a>
-          <a
-            *ngIf="!authService.isGuest()"
-            routerLink="/groups"
-            class="text-white hover:text-blue-200 transition-colors"
-          >
+        </div>
+        
+        <!-- Desktop Navigation -->
+        <nav class="hidden ml-10 md:flex space-x-6">
+          <a 
+            *ngIf="isAuthenticated()" 
+            routerLink="/home" 
+            routerLinkActive="text-indigo-400 border-b-2 border-indigo-500"
+            class="text-gray-300 hover:text-white py-1 transition-colors">
+            Home
+          </a>
+          <a 
+            *ngIf="isAuthenticated()" 
+            routerLink="/groups" 
+            routerLinkActive="text-indigo-400 border-b-2 border-indigo-500"
+            class="text-gray-300 hover:text-white py-1 transition-colors">
             Groups
           </a>
-          <a
-            *ngIf="!authService.isGuest()"
-            routerLink="/calendar"
-            class="text-white hover:text-blue-200 transition-colors"
-          >
+          <a 
+            *ngIf="isAuthenticated()" 
+            routerLink="/calendar" 
+            routerLinkActive="text-indigo-400 border-b-2 border-indigo-500"
+            class="text-gray-300 hover:text-white py-1 transition-colors">
             Calendar
           </a>
-          <a
-            *ngIf="!authService.isGuest()"
-            routerLink="/weather"
-            class="text-white hover:text-blue-200 transition-colors"
-          >
+          <a 
+            *ngIf="isAuthenticated()" 
+            routerLink="/weather" 
+            routerLinkActive="text-indigo-400 border-b-2 border-indigo-500"
+            class="text-gray-300 hover:text-white py-1 transition-colors">
             Weather
           </a>
         </nav>
       </div>
 
-      <!-- Right Side: Profile -->
+      
+      <!-- Authentication/User Menu -->
       <div class="flex items-center space-x-4">
-        <!-- Profile Dropdown -->
-        <div class="relative">
-          <button
-            (click)="toggleProfileMenu()"
+        <!-- Not authenticated user options -->
+        <div *ngIf="!isAuthenticated() && !isGuest()">
+          <a 
+            routerLink="/login" 
+            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-lg hover:shadow-indigo-500/30">
+            Sign In
+          </a>
+        </div>
+        
+        <!-- Guest user options -->
+        <div *ngIf="isGuest()">
+          <a 
+            routerLink="/login" 
+            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-lg hover:shadow-indigo-500/30">
+            Sign In
+          </a>
+        </div>
+        
+        <!-- Authenticated user menu -->
+        <div *ngIf="isAuthenticated() && !isGuest()" class="relative">
+          <button 
+            (click)="toggleProfileMenu()" 
             class="flex items-center space-x-2 focus:outline-none"
-            aria-label="Open profile menu"
-          >
-            <div class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-              <img
-                src="assets/images/avatar-placeholder.png"
-                alt="User profile"
-                class="w-full h-full object-cover"
-                onerror="this.src='https://via.placeholder.com/32?text=User'"
-              />
+            [attr.aria-expanded]="isProfileMenuOpen"
+            aria-label="User menu">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+              {{getUserInitials()}}
             </div>
+            <div class="hidden md:block text-left">
+              <span class="text-sm font-medium text-white">{{getUserName()}}</span>
+              <span class="block text-xs text-gray-400">{{getUserRoles() || 'User'}}</span>
+            </div>
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              class="h-5 w-5 text-gray-400 transition-transform duration-200"
+              [class.rotate-180]="isProfileMenuOpen"
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
-
-          <!-- Dropdown Menu -->
-          <div
-            *ngIf="isProfileMenuOpen"
-            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
-          >
-            <ng-container *ngIf="!authService.isGuest(); else guestMenu">
-              <a
-                routerLink="/user-preferences"
-                (click)="isProfileMenuOpen = false"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Settings
-              </a>
-              <a
-                routerLink="/liked-activities"
-                (click)="isProfileMenuOpen = false"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                My Activities
-              </a>
-              <a
-                routerLink="/groups"
-                (click)="isProfileMenuOpen = false"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                My Groups
-              </a>
-              <button
-                (click)="logout()"
-                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Logout
-              </button>
-            </ng-container>
-            <ng-template #guestMenu>
-              <a
-                routerLink="/login"
-                (click)="isProfileMenuOpen = false"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Sign In
-              </a>
-              <a
-                routerLink="/register"
-                (click)="isProfileMenuOpen = false"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Register
-              </a>
-            </ng-template>
+          
+          <!-- Dropdown menu -->
+          <div 
+            *ngIf="isProfileMenuOpen" 
+            class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-1 z-10 border border-gray-700 animate-fade-in">
+            <a 
+              routerLink="/profile" 
+              class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+              My Profile
+            </a>
+            <a 
+              routerLink="/groups" 
+              class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+              My groups
+            </a>
+            <a 
+              routerLink="/favorites"
+              class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+              My activities
+            </a>
+            <a 
+              routerLink="/calendar"
+              class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+              My calendar
+            </a>
+            <div class="border-t border-gray-700 my-1"></div>
+            <button 
+              (click)="logout()" 
+              class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-700 transition-colors">
+              Sign out
+            </button>
           </div>
         </div>
+        
+        <!-- Mobile menu button -->
+        <button 
+          (click)="toggleMobileMenu()" 
+          class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none"
+          [attr.aria-expanded]="isMobileMenuOpen"
+          aria-label="Main menu">
+          <svg 
+            *ngIf="!isMobileMenuOpen" 
+            class="h-6 w-6" 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <svg 
+            *ngIf="isMobileMenuOpen" 
+            class="h-6 w-6" 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
-</header>
-
-<!-- Mobile Header -->
-<header
-  class="fixed top-0 left-0 right-0 z-50 bg-blue-900 text-white shadow-md md:hidden"
->
-  <div class="px-4">
-    <div class="flex items-center justify-between h-14">
-      <!-- Logo -->
-      <a routerLink="/" class="flex items-center">
-        <span class="text-lg font-bold text-white">FamilyFunPlanner</span>
+  
+  <!-- Mobile menu -->
+  <div 
+    *ngIf="isMobileMenuOpen" 
+    class="md:hidden bg-gray-800/95 backdrop-blur-lg animate-fade-in">
+    <div class="px-2 pt-2 pb-3 space-y-1">
+      <a 
+        *ngIf="isAuthenticated()" 
+        routerLink="/home" 
+        routerLinkActive="bg-gray-700 text-white"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+        Home
       </a>
-
-      <!-- Mobile Menu Button -->
-      <button
-        (click)="toggleMobileMenu()"
-        class="p-2 rounded-md text-white hover:bg-blue-800 focus:outline-none"
-        aria-label="Open main menu"
-      >
-        <svg
-          *ngIf="!isMobileMenuOpen"
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-        <svg
-          *ngIf="isMobileMenuOpen"
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+      <a 
+        *ngIf="isAuthenticated()" 
+        routerLink="/groups" 
+        routerLinkActive="bg-gray-700 text-white"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+        Groups
+      </a>
+      <a 
+        *ngIf="isAuthenticated()" 
+        routerLink="/calendar" 
+        routerLinkActive="bg-gray-700 text-white"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+        Calendar
+      </a>
+      <a 
+        *ngIf="isAuthenticated()" 
+        routerLink="/weather" 
+        routerLinkActive="bg-gray-700 text-white"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+        Weather
+      </a>
+      <a 
+        *ngIf="isAuthenticated()" 
+        routerLink="/favorites" 
+        routerLinkActive="bg-gray-700 text-white"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+        Favorites
+      </a>
+      <a 
+        *ngIf="isAuthenticated()" 
+        routerLink="/profile" 
+        routerLinkActive="bg-gray-700 text-white"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+        My Profile
+      </a>
+      <button 
+        *ngIf="isAuthenticated()" 
+        (click)="logout()" 
+        class="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-gray-700 transition-colors">
+        Sign out
       </button>
     </div>
   </div>
-
-  <!-- Mobile Menu -->
-  <div *ngIf="isMobileMenuOpen" class="bg-blue-900 shadow-md">
-    <nav class="px-4 pt-2 pb-4 space-y-1">
-      <a
-        routerLink="/activities"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        Activities
-      </a>
-      <a
-        *ngIf="!authService.isGuest()"
-        routerLink="/groups"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        Groups
-      </a>
-      <a
-        *ngIf="!authService.isGuest()"
-        routerLink="/calendar"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        Calendar
-      </a>
-      <a
-        *ngIf="!authService.isGuest()"
-        routerLink="/weather"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        Weather
-      </a>
-      <a
-        *ngIf="!authService.isGuest()"
-        routerLink="/liked-activities"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        My Activities
-      </a>
-      <a
-        *ngIf="!authService.isGuest()"
-        routerLink="/user-preferences"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        Settings
-      </a>
-      <button
-        *ngIf="!authService.isGuest()"
-        (click)="logout(); isMobileMenuOpen = false"
-        class="block w-full text-left py-2 text-white hover:text-blue-200"
-      >
-        Logout
-      </button>
-      <a
-        *ngIf="authService.isGuest()"
-        routerLink="/login"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        Sign In
-      </a>
-      <a
-        *ngIf="authService.isGuest()"
-        routerLink="/register"
-        (click)="isMobileMenuOpen = false"
-        class="block py-2 text-white hover:text-blue-200"
-      >
-        Register
-      </a>
-    </nav>
-  </div>
 </header>
 
-<!-- Spacer for fixed header -->
-<div class="h-16 md:block hidden"></div>
-<div class="h-14 md:hidden block"></div>
+<!-- Header spacer to prevent content from hiding under the fixed header -->
+<div class="h-16 md:h-20"></div>

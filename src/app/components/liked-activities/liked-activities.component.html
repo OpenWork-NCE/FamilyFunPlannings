@@ -1,5 +1,5 @@
 <!-- Main Layout -->
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+<div class="min-h-screen bg-gray-900">
   <!-- Header -->
   <app-header></app-header>
 
@@ -7,10 +7,10 @@
   <main class="container mx-auto px-4 py-6">
     <!-- Title and Description -->
     <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <h1 class="text-3xl font-bold text-white mb-2">
         My Favorite Activities
       </h1>
-      <p class="text-gray-600 dark:text-gray-300">
+      <p class="text-gray-300">
         Activities you've saved for later
       </p>
     </div>
@@ -25,7 +25,7 @@
     <!-- Error Message -->
     <div
       *ngIf="errorMessage && !isLoading"
-      class="bg-red-100 dark:bg-red-900/50 border-l-4 border-red-500 text-red-700 dark:text-red-200 p-4 mb-6 rounded"
+      class="bg-red-900/50 border-l-4 border-red-500 text-red-200 p-4 mb-6 rounded"
     >
       <p>{{ errorMessage }}</p>
     </div>
@@ -33,11 +33,11 @@
     <!-- No Favorites -->
     <div
       *ngIf="!isLoading && favoriteActivities.length === 0 && !errorMessage"
-      class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-md"
+      class="text-center py-12 bg-gray-800 rounded-lg shadow-md"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-16 w-16 mx-auto text-gray-400 dark:text-gray-500"
+        class="h-16 w-16 mx-auto text-gray-500"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -49,19 +49,19 @@
           d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
         />
       </svg>
-      <h2 class="mt-4 text-xl font-semibold text-gray-700 dark:text-gray-200">
+      <h2 class="mt-4 text-xl font-semibold text-gray-200">
         No favorite activities yet
       </h2>
-      <p class="mt-2 text-gray-500 dark:text-gray-400">
+      <p class="mt-2 text-gray-400">
         Explore activities and click the heart icon to add them to your
         favorites
       </p>
-      <a
-        routerLink="/activities"
+      <button
+        (click)="navigateToActivities()"
         class="mt-6 inline-block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
       >
         Explore Activities
-      </a>
+      </button>
     </div>
 
     <!-- Activity Grid -->
@@ -69,183 +69,25 @@
       *ngIf="!isLoading && favoriteActivities.length > 0"
       class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
     >
-      <div
-        *ngFor="let activity of favoriteActivities"
-        class="activity-card bg-white dark:bg-white-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-      >
-        <!-- Activity Image -->
-        <div class="relative h-48 bg-gray-200 dark:bg-gray-700">
-          <img
-            *ngIf="getActivityImage(activity)"
-            [src]="getActivityImage(activity)"
-            [alt]="activity.title"
-            class="w-full h-full object-cover"
-          />
-          <div
-            *ngIf="!getActivityImage(activity)"
-            class="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-700"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-16 w-16 text-gray-400 dark:text-gray-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-
-          <!-- Category Badge -->
-          <div
-            *ngIf="activity.category && activity.category.length > 0"
-            class="absolute bottom-2 left-2"
-          >
-            <span
-              class="bg-indigo-600 text-white text-xs px-2 py-1 rounded-full"
-            >
-              {{ activity.category[0] }}
-            </span>
-          </div>
-
-          <!-- Remove Button -->
-          <button
-            (click)="removeFromFavorites(activity.id)"
-            class="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-            title="Remove from favorites"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5 text-red-500"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </button>
+      <div *ngFor="let activity of favoriteActivities" class="relative">
+        <!-- Added Date Badge -->
+        <div class="absolute top-0 right-0 z-10 bg-indigo-900/80 text-white text-xs py-1 px-2 rounded-bl-lg rounded-tr-lg">
+          Added: {{ formatDate(getAddedDate(activity.id)) }}
         </div>
-
-        <!-- Activity Content -->
-        <div class="p-4">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">
-            {{ activity.title }}
-          </h3>
-
-          <p
-            *ngIf="activity.location"
-            class="text-sm text-gray-600 dark:text-gray-300 mb-2 flex items-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 mr-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            {{ activity.location }}
-          </p>
-
-          <p class="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
-            {{ activity.description }}
-          </p>
-
-          <!-- Activity Details -->
-          <div class="flex flex-wrap gap-2 mb-4">
-            <span
-              *ngIf="activity.budget"
-              class="text-xs bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 px-2 py-1 rounded-full flex items-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-3 w-3 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Budget: ${{ activity.budget }}
-            </span>
-
-            <span
-              *ngIf="activity.ageGroups && activity.ageGroups.length > 0"
-              class="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full flex items-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-3 w-3 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              {{ activity.ageGroups[0] }}
-            </span>
-
-            <span
-              *ngIf="activity.timeOfDay"
-              class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full flex items-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-3 w-3 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              {{ activity.timeOfDay }}
-            </span>
-          </div>
-
-          <!-- View Details Button -->
-          <a
-            [routerLink]="['/activities', activity.id]"
-            class="block w-full text-center py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-          >
-            View Details
-          </a>
-        </div>
+        
+        <!-- Activity Card Component -->
+        <app-activity-card 
+          [activity]="activity" 
+          (favoriteToggle)="onFavoriteToggle($event)"
+        ></app-activity-card>
       </div>
+    </div>
+    
+    <!-- Empty State with Pagination -->
+    <div *ngIf="!isLoading && favoriteActivities.length > 0" class="mt-8 flex justify-between items-center">
+      <p class="text-gray-400">
+        Showing {{ favoriteActivities.length }} favorites
+      </p>
     </div>
   </main>
 

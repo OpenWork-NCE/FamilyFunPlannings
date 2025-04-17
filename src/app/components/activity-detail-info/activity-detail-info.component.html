@@ -1,12 +1,15 @@
 <div class="activity-info" *ngIf="activity">
   <!-- Description Section -->
   <div class="mb-6 border-b border-gray-700 pb-6">
-    <div
-      class="flex justify-between items-center mb-2 md:hidden"
+    <button
+      class="flex justify-between items-center mb-2 md:hidden w-full text-left"
       (click)="toggleSection('description')"
+      (keydown.enter)="toggleSection('description')"
+      [attr.aria-expanded]="isSectionExpanded('description')"
+      aria-controls="description-content"
     >
       <h2 class="text-xl font-semibold text-white">Description</h2>
-      <button class="text-white">
+      <span class="text-white">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-5 w-5"
@@ -33,24 +36,37 @@
             clip-rule="evenodd"
           />
         </svg>
-      </button>
-    </div>
+      </span>
+    </button>
     <h2 class="text-xl font-semibold text-white mb-2 hidden md:block">
       Description
     </h2>
-    <div *ngIf="isSectionExpanded('description') || true" class="text-white">
-      <p>{{ activity.description }}</p>
+    <div *ngIf="isSectionExpanded('description') || true" id="description-content" class="text-white">
+      <p>{{ description }}</p>
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <span class="text-sm font-medium text-gray-300">Categories:</span>
+          <p class="text-white">{{ activity.categories.join(', ') }}</p>
+        </div>
+        <div *ngIf="activity.subcategories && activity.subcategories.length > 0">
+          <span class="text-sm font-medium text-gray-300">Subcategories:</span>
+          <p class="text-white">{{ activity.subcategories.join(', ') }}</p>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Details Section -->
   <div class="mb-6 border-b border-gray-700 pb-6">
-    <div
-      class="flex justify-between items-center mb-2 md:hidden"
+    <button
+      class="flex justify-between items-center mb-2 md:hidden w-full text-left"
       (click)="toggleSection('details')"
+      (keydown.enter)="toggleSection('details')"
+      [attr.aria-expanded]="isSectionExpanded('details')"
+      aria-controls="details-content"
     >
       <h2 class="text-xl font-semibold text-white">Details</h2>
-      <button class="text-white">
+      <span class="text-white">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-5 w-5"
@@ -77,50 +93,74 @@
             clip-rule="evenodd"
           />
         </svg>
-      </button>
-    </div>
+      </span>
+    </button>
     <h2 class="text-xl font-semibold text-white mb-2 hidden md:block">
       Details
     </h2>
     <div
       *ngIf="isSectionExpanded('details') || true"
+      id="details-content"
       class="grid grid-cols-1 md:grid-cols-2 gap-4"
     >
-      <div>
-        <h3 class="text-sm font-medium text-gray-300">Duration</h3>
-        <p class="text-white">{{ activity.duration }}</p>
+      <!-- <div *ngIf="openingHours">
+        <h3 class="text-sm font-medium text-gray-300">Opening Hours</h3>
+        <p class="text-white">{{ openingHours }}</p>
+      </div>
+      <div *ngIf="phone">
+        <h3 class="text-sm font-medium text-gray-300">Phone</h3>
+        <p class="text-white">
+          <a [href]="'tel:' + phone" class="text-blue-400 hover:text-blue-300">{{ phone }}</a>
+        </p>
+      </div>
+      <div *ngIf="website">
+        <h3 class="text-sm font-medium text-gray-300">Website</h3>
+        <p class="text-white">
+          <a [href]="website" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 truncate block">
+            {{ website }}
+          </a>
+        </p>
+      </div> -->
+      <div *ngIf="accessibilityInfo">
+        <h3 class="text-sm font-medium text-gray-300">Accessibility</h3>
+        <p class="text-white">{{ accessibilityInfo }}</p>
+      </div>
+      <div *ngIf="priceInfo">
+        <h3 class="text-sm font-medium text-gray-300">Price</h3>
+        <p class="text-white">{{ priceInfo }}</p>
+      </div>
+      <div *ngIf="openingStatus">
+        <h3 class="text-sm font-medium text-gray-300">Status</h3>
+        <p class="text-white">{{ openingStatus }}</p>
       </div>
       <div>
         <h3 class="text-sm font-medium text-gray-300">Location</h3>
-        <p class="text-white">{{ activity.location }}</p>
+        <p class="text-white">{{ activity.city }}</p>
       </div>
       <div>
-        <h3 class="text-sm font-medium text-gray-300">Created By</h3>
-        <p class="text-white">{{ activity.createdBy }}</p>
-      </div>
-      <div>
-        <h3 class="text-sm font-medium text-gray-300">Created On</h3>
-        <p class="text-white">
-          {{ activity.createdAt | date : "mediumDate" }}
-        </p>
+        <h3 class="text-sm font-medium text-gray-300">Last Updated</h3>
+        <p class="text-white">{{ formatLastUpdated(activity.lastUpdated) }}</p>
       </div>
     </div>
   </div>
 
-  <!-- Additional Info Section -->
-  <div *ngIf="activity.additionalInfo" class="mb-6">
-    <div
-      class="flex justify-between items-center mb-2 md:hidden"
-      (click)="toggleSection('additionalInfo')"
+  <!-- Tags Section -->
+  <div class="mb-6" *ngIf="activity.tags && activity.tags.length > 0">
+    <button
+      class="flex justify-between items-center mb-2 md:hidden w-full text-left"
+      (click)="toggleSection('tags')"
+      (keydown.enter)="toggleSection('tags')"
+      [attr.aria-expanded]="isSectionExpanded('tags')"
+      aria-controls="tags-content"
     >
-      <h2 class="text-xl font-semibold text-white">Additional Information</h2>
-      <button class="text-white">
+      <h2 class="text-xl font-semibold text-white">Tags & Attributes</h2>
+      <span class="text-white">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-5 w-5"
           viewBox="0 0 20 20"
           fill="currentColor"
-          *ngIf="!isSectionExpanded('additionalInfo')"
+          *ngIf="!isSectionExpanded('tags')"
         >
           <path
             fill-rule="evenodd"
@@ -133,7 +173,7 @@
           class="h-5 w-5"
           viewBox="0 0 20 20"
           fill="currentColor"
-          *ngIf="isSectionExpanded('additionalInfo')"
+          *ngIf="isSectionExpanded('tags')"
         >
           <path
             fill-rule="evenodd"
@@ -141,13 +181,116 @@
             clip-rule="evenodd"
           />
         </svg>
-      </button>
-    </div>
-    <h2 class="text-xl font-semibold text-white mb-2 hidden md:block">
-      Additional Information
+      </span>
+    </button>
+    <h2 class="text-xl font-semibold text-white mb-4 hidden md:block">
+      Tags & Attributes
     </h2>
-    <div *ngIf="isSectionExpanded('additionalInfo') || true" class="text-white">
-      <p>{{ activity.additionalInfo }}</p>
+    
+    <div *ngIf="isSectionExpanded('tags') || true" id="tags-content" class="text-white">
+      <!-- Tag Groups - Modern Categorized View -->
+      <div class="space-y-6">
+        <div *ngFor="let group of tagGroups" class="border border-gray-700 rounded-lg overflow-hidden">
+          <!-- Group Header -->
+          <div class="bg-gray-800 px-4 py-3 flex items-center justify-between cursor-pointer"
+               (click)="toggleSection('group_' + group.name)"
+               (keydown.enter)="toggleSection('group_' + group.name)"
+               tabindex="0"
+               [attr.aria-expanded]="isSectionExpanded('group_' + group.name) ?? true">
+            <div class="flex items-center">
+              <!-- Icon based on group type -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" [ngClass]="'text-' + group.colorClass + '-400'" viewBox="0 0 20 20" fill="currentColor" *ngIf="group.icon === 'information-circle'">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2h.01a1 1 0 000-2H9z" clip-rule="evenodd" />
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" [ngClass]="'text-' + group.colorClass + '-400'" viewBox="0 0 20 20" fill="currentColor" *ngIf="group.icon === 'phone'">
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" [ngClass]="'text-' + group.colorClass + '-400'" viewBox="0 0 20 20" fill="currentColor" *ngIf="group.icon === 'tag'">
+                <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" [ngClass]="'text-' + group.colorClass + '-400'" viewBox="0 0 20 20" fill="currentColor" *ngIf="group.icon === 'cog'">
+                <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" [ngClass]="'text-' + group.colorClass + '-400'" viewBox="0 0 20 20" fill="currentColor" *ngIf="group.icon === 'link'">
+                <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" [ngClass]="'text-' + group.colorClass + '-400'" viewBox="0 0 20 20" fill="currentColor" *ngIf="group.icon === 'dots-horizontal'">
+                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+              </svg>
+              
+              <h3 class="font-medium">{{ group.name }} ({{ group.tags.length }})</h3>
+            </div>
+            
+            <!-- Expand/Collapse Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform" 
+                 [ngClass]="{'rotate-180': !(isSectionExpanded('group_' + group.name) ?? true)}"
+                 viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          
+          <!-- Group Content -->
+          <div class="p-4" *ngIf="isSectionExpanded('group_' + group.name) ?? false">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div *ngFor="let tag of group.tags" 
+                   class="flex items-start p-3 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
+                   [class]="'bg-' + group.colorClass + '-900/10 hover:bg-' + group.colorClass + '-900/20'">
+                
+                <!-- Tag Key -->
+                <div class="flex-1">
+                  <div class="flex items-center">
+                    <span class="text-sm font-medium text-gray-300">{{ tag.key }}</span>
+                    
+                    <!-- Documentation Link -->
+                    <a *ngIf="hasExternalLink(tag)"
+                       href="javascript:void(0)"
+                       (click)="openExternalLink(tag.url)"
+                       class="ml-1 text-gray-400 hover:text-blue-400 transition-colors"
+                       [title]="'View documentation for ' + tag.key">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </a>
+                    
+                    <!-- Tooltip if available -->
+                    <span *ngIf="tag.tooltip" class="ml-1 group relative">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 w-48 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-10">
+                        {{ tag.tooltip }}
+                      </div>
+                    </span>
+                  </div>
+                  
+                  <!-- Tag Value -->
+                  <div class="mt-1 text-white" [innerHTML]="tag.displayValue"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Original Tag Display (as a fallback) -->
+      <div *ngIf="tagGroups.length === 0" class="flex flex-wrap gap-2">
+        <div *ngFor="let tag of activity.tags" 
+          class="inline-flex items-center px-3 py-1 rounded-full text-sm"
+          [ngClass]="{
+            'bg-blue-900/30 text-blue-300 border border-blue-700': getTagCategory(tag) === 'Amenity',
+            'bg-green-900/30 text-green-300 border border-green-700': getTagCategory(tag) === 'Brand',
+            'bg-purple-900/30 text-purple-300 border border-purple-700': getTagCategory(tag) === 'Cuisine',
+            'bg-yellow-900/30 text-yellow-300 border border-yellow-700': getTagCategory(tag) === 'Name',
+            'bg-red-900/30 text-red-300 border border-red-700': getTagCategory(tag) === 'Opening Hours',
+            'bg-indigo-900/30 text-indigo-300 border border-indigo-700': getTagCategory(tag) === 'Phone',
+            'bg-pink-900/30 text-pink-300 border border-pink-700': getTagCategory(tag) === 'Website',
+            'bg-teal-900/30 text-teal-300 border border-teal-700': getTagCategory(tag) === 'Wheelchair Access',
+            'bg-gray-900/30 text-gray-300 border border-gray-700': getTagCategory(tag) === 'Other'
+          }">
+          <span class="text-xs opacity-70 mr-1">{{ getTagKey(tag) }}:</span>
+          <span>{{ getTagValue(tag) }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>

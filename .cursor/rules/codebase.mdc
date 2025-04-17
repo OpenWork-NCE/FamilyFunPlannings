@@ -1,0 +1,218 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Family Fun Plannings - Codebase Overview
+
+## Project Architecture
+
+### Technology Stack
+- Angular 19.2.0
+- TypeScript 5.7.2
+- TailwindCSS 4.0.12
+- Express.js for SSR
+- RxJS 7.8.0
+
+### Project Structure
+```
+familyfunplannings/
+├── src/
+│   ├── app/
+│   │   ├── components/
+│   │   │   ├── activity/
+│   │   │   ├── activity-card/
+│   │   │   ├── activity-detail/
+│   │   │   ├── activity-detail-info/
+│   │   │   ├── activity-list/
+│   │   │   ├── bottom-nav/
+│   │   │   ├── calendar/
+│   │   │   ├── carousel/
+│   │   │   ├── comment/
+│   │   │   ├── dialog/
+│   │   │   ├── filter/
+│   │   │   ├── footer/
+│   │   │   ├── group-detail/
+│   │   │   ├── groups/
+│   │   │   ├── header/
+│   │   │   ├── home/
+│   │   │   ├── liked-activities/
+│   │   │   ├── login/
+│   │   │   ├── register/
+│   │   │   ├── search-bar/
+│   │   │   ├── user-preferences/
+│   │   │   ├── user-profile/
+│   │   │   ├── weather/
+│   │   │   └── welcome/
+│   │   ├── services/
+│   │   │   ├── activity.service.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── calendar.service.ts
+│   │   │   ├── calendar.service.spec.ts
+│   │   │   ├── comment.service.ts
+│   │   │   ├── group.service.ts
+│   │   │   ├── theme.service.ts
+│   │   │   ├── user.service.ts
+│   │   │   └── weather.service.ts
+│   │   ├── interceptors/
+│   │   │   └── jwt.interceptor.ts
+│   │   ├── app.component.ts
+│   │   ├── app.component.html
+│   │   ├── app.config.ts
+│   │   ├── app.config.server.ts
+│   │   ├── app.routes.ts
+│   │   └── app.routes.server.ts
+│   ├── assets/
+│   │   └── images/
+│   ├── environments/
+│   │   ├── environment.ts
+│   │   └── environment.prod.ts
+│   ├── styles.css
+│   ├── index.html
+│   ├── main.ts
+│   ├── main.server.ts
+│   └── server.ts
+├── node_modules/
+├── dist/
+├── .angular/
+├── .cursor/
+├── .git/
+├── public/
+├── .vscode/
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── tsconfig.app.json
+├── tsconfig.spec.json
+├── angular.json
+├── .postcssrc.json
+├── .editorconfig
+└── .gitignore
+```
+
+### Component Organization
+The application follows a feature-based component structure:
+
+1. Core Features:
+   - Authentication (login, register)
+   - User Management (profile, preferences)
+   - Activities (list, detail, card)
+   - Groups (list, detail)
+   - Calendar Integration
+   - Weather Integration
+
+2. Shared Components:
+   - Navigation (header, footer, bottom-nav)
+   - UI Elements (carousel, search-bar, filter)
+   - Dialog System
+   - Comments
+
+### Services Architecture
+Core services handle specific business domains:
+- AuthService: Authentication and authorization
+- UserService: User management and preferences
+- ActivityService: Activity CRUD and search
+- GroupService: Group management and interactions
+- CalendarService: Calendar integration and event management
+- WeatherService: Weather data integration
+- ThemeService: UI theming and customization
+- CommentService: User comments and interactions
+
+## Coding Standards
+
+### TypeScript Best Practices
+1. Use strict type checking
+2. Leverage interface definitions for data models
+3. Implement proper error handling
+4. Use async/await for asynchronous operations
+5. Implement proper dependency injection
+
+### Angular Patterns
+1. Lazy loading for feature modules
+2. Smart/Presentational component pattern
+3. Observable-based state management
+4. Route guards for protected routes
+5. HTTP interceptors for request/response handling
+
+### Component Guidelines
+1. Single Responsibility Principle
+2. Input/Output decorators for component communication
+3. OnPush change detection strategy where applicable
+4. Proper lifecycle hook implementation
+5. Component-specific styling with encapsulation
+
+### Service Guidelines
+1. Singleton services for global state
+2. CRUD operations following RESTful principles
+3. Error handling with proper error propagation
+4. Caching strategies for performance
+5. Proper unsubscribe patterns for observables
+
+## State Management
+- Services maintain feature-specific state
+- RxJS BehaviorSubjects for reactive state
+- Local storage for persistent data
+- Session storage for temporary data
+
+## Security Practices
+1. JWT-based authentication
+2. XSS prevention
+3. CSRF protection
+4. Secure storage of sensitive data
+5. Input validation and sanitization
+
+## Performance Optimization
+1. Lazy loading of routes
+2. Image optimization
+3. Caching strategies
+4. Virtual scrolling for large lists
+5. Memoization of expensive computations
+
+## Testing Strategy
+1. Unit tests with Jasmine
+2. Component testing
+3. Service testing
+4. E2E testing capabilities
+5. Test coverage monitoring
+
+## Error Handling
+1. Global error handling
+2. Service-specific error handling
+3. User-friendly error messages
+4. Error logging and monitoring
+5. Graceful degradation
+
+## Build and Deployment
+1. Development server configuration
+2. Production build optimization
+3. Server-side rendering setup
+4. Environment-specific configurations
+5. CI/CD pipeline readiness
+
+## Documentation
+1. JSDoc comments for public APIs
+2. README.md maintenance
+3. Inline code documentation
+4. API documentation
+5. Component documentation
+
+## Accessibility
+1. ARIA labels
+2. Keyboard navigation
+3. Color contrast compliance
+4. Screen reader compatibility
+5. Focus management
+
+## Responsive Design
+1. Mobile-first approach
+2. Responsive breakpoints
+3. Flexible layouts
+4. Touch-friendly interfaces
+5. Progressive enhancement
+
+## Code Quality
+1. ESLint configuration
+2. Prettier formatting
+3. Git hooks for pre-commit checks
+4. Code review guidelines
+5. Technical debt management

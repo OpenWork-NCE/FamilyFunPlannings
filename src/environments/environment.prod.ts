@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.familyfunplannings.com/api',
+  apiUrl: 'https://familyactivities-cubdbnh2g3g8cwfd.francecentral-01.azurewebsites.net',
 };

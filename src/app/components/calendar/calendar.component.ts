@@ -1,24 +1,16 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import {
-  CalendarService,
-  CalendarEvent,
-} from '../../services/calendar.service';
-import {
-  Observable,
-  map,
-  switchMap,
-  tap,
-  Subscription,
-  of,
-  retry,
-  catchError,
-} from 'rxjs';
+import { Subscription, of } from 'rxjs';
+import { catchError, retry, map } from 'rxjs/operators';
 import { HeaderComponent } from '../header/header.component';
 import { FooterComponent } from '../footer/footer.component';
 import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
+import { CalendarService, CalendarEvent } from '../../services/calendar.service';
+
+// Type for API date format
+type ApiDateFormat = string | number[];
 
 interface CalendarDay {
   date: Date;
@@ -66,19 +58,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
   ];
   dayNames: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  isLoading: boolean = true;
+  isLoading = true;
   events: CalendarEvent[] = [];
   selectedDateEvents: CalendarEvent[] = [];
 
   viewMode: 'month' | 'day' = 'month';
 
-  isDarkMode: boolean = false;
+  isDarkMode = false;
 
   private subscriptions: Subscription[] = [];
   loadingError: string | null = null;
 
-  totalEventsCount: number = 0;
-  plannedDaysCount: number = 0;
+  totalEventsCount = 0;
+  plannedDaysCount = 0;
 
   constructor(
     private calendarService: CalendarService,
@@ -129,7 +121,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const subscription = this.calendarService
       .getEventsForMonth(
         this.currentDate.getFullYear(),
-        this.currentDate.getMonth()
+        this.currentDate.getMonth() + 1 // Month is 1-indexed in the API
       )
       .pipe(
         retry(2), // Retry up to 2 times if there's an error
@@ -145,10 +137,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
           this.events = events;
           this.totalEventsCount = events.length;
 
-          // Count unique days with events
+          // Count unique days with events using the fixed date handling
           const uniqueDays = new Set<string>();
           events.forEach((event) => {
-            const dateStr = new Date(event.start).toDateString();
+            const eventDate = this.createDateFromApiFormat(event.start);
+            const dateStr = eventDate.toDateString();
             uniqueDays.add(dateStr);
           });
           this.plannedDaysCount = uniqueDays.size;
@@ -208,10 +201,24 @@ export class CalendarComponent implements OnInit, OnDestroy {
    */
   sortEventsByTime(events: CalendarEvent[]): CalendarEvent[] {
     return [...events].sort((a, b) => {
-      const aTime = new Date(a.start).getTime();
-      const bTime = new Date(b.start).getTime();
+      const aTime = this.createDateFromApiFormat(a.start).getTime();
+      const bTime = this.createDateFromApiFormat(b.start).getTime();
       return aTime - bTime;
     });
+  }
+
+  /**
+   * Create a Date object from the API date format
+   * Handles both ISO strings and array formats
+   */
+  createDateFromApiFormat(dateValue: ApiDateFormat): Date {
+    if (Array.isArray(dateValue)) {
+      const [year, month, day, hour, minute] = dateValue;
+      // Month in the API is 1-indexed, but JavaScript Date expects 0-indexed
+      return new Date(year, month - 1, day, hour || 0, minute || 0);
+    } else {
+      return new Date(dateValue);
+    }
   }
 
   /**
@@ -274,15 +281,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
       // Find events for this day
       const dayEvents = this.events.filter((event) => {
-        const eventDate = new Date(event.start);
+        const eventDate = this.createDateFromApiFormat(event.start);
         return (
           eventDate.getDate() === date.getDate() &&
           eventDate.getMonth() === date.getMonth() &&
           eventDate.getFullYear() === date.getFullYear()
         );
       });
-
-      console.log('Here are day events : ::: ', this.events);
 
       return {
         date,
@@ -400,9 +405,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Format time for display
+   * Get the event time as a formatted string
    */
-  formatTime(date: Date): string {
+  getEventTime(event: CalendarEvent): string {
+    const date = this.createDateFromApiFormat(event.start);
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -410,10 +416,31 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get event color
+   * Format time for display from API date format
+   */
+  formatTime(dateValue: ApiDateFormat): string {
+    const date = this.createDateFromApiFormat(dateValue);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  /**
+   * Get event color based on event type or custom color
    */
   getEventColor(event: CalendarEvent): string {
-    return this.calendarService.getEventColor(event);
+    // Use custom color if provided
+    if (event.color) {
+      return event.color;
+    }
+
+    // Default color scheme based on event type
+    if (event.groupId) {
+      return '#3B82F6'; // Blue for group events
+    } else {
+      return '#8B5CF6'; // Purple for personal events
+    }
   }
 
   /**
@@ -421,12 +448,47 @@ export class CalendarComponent implements OnInit, OnDestroy {
    */
   getEventCountForDay(date: Date): number {
     return this.events.filter((event) => {
-      const eventDate = new Date(event.start);
-      return (
-        eventDate.getDate() === date.getDate() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
+      const eventDate = this.createDateFromApiFormat(event.start);
+      return this.isSameDay(eventDate, date);
     }).length;
+  }
+
+  /**
+   * Get grouped events by time for better day view presentation
+   */
+  getGroupedEventsForSelectedDate(): { time: string; events: CalendarEvent[] }[] {
+    const groups: Record<string, CalendarEvent[]> = {};
+    
+    // Group events by hour
+    this.selectedDateEvents.forEach(event => {
+      const eventDate = this.createDateFromApiFormat(event.start);
+      const hour = eventDate.getHours();
+      const timeKey = hour.toString().padStart(2, '0') + ':00';
+      
+      if (!groups[timeKey]) {
+        groups[timeKey] = [];
+      }
+      
+      groups[timeKey].push(event);
+    });
+    
+    // Convert to array and sort by time
+    return Object.keys(groups)
+      .sort()
+      .map(time => ({
+        time,
+        events: groups[time]
+      }));
+  }
+
+  /**
+   * Check if two dates are on the same day
+   */
+  isSameDay(date1: Date, date2: Date): boolean {
+    return (
+      date1.getDate() === date2.getDate() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getFullYear() === date2.getFullYear()
+    );
   }
 }

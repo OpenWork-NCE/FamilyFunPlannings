@@ -1,186 +1,189 @@
 <!-- Filter Modal Backdrop -->
 <div
   *ngIf="isOpen"
-  class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+  class="fixed inset-0 overflow-hidden z-50 bg-black/60 backdrop-blur-[2px] transition-opacity"
+  [class.hidden]="!isOpen"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
   (click)="onClose()"
+  (keydown.escape)="onClose()"
+  [@backdropAnimation]
 >
-  <!-- Filter Modal Content -->
+  <!-- Filter Panel -->
   <div
-    class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
-    (click)="$event.stopPropagation()"
+    class="absolute inset-y-0 right-0 max-w-full flex"
   >
-    <!-- Header -->
-    <div
-      class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
-    >
-      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
-        Filter Activities
-      </h2>
-      <button
-        (click)="onClose()"
-        class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-        aria-label="Close filter"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Filter Options -->
-    <div class="p-4 space-y-6">
-      <!-- Location -->
-      <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3">
-          Location
-        </h3>
-        <div class="flex flex-wrap gap-2">
-          @for (location of locations; track location) {
+    <div class="relative w-screen max-w-md" [@filterPanelAnimation]>
+      <div class="h-full flex flex-col py-6 bg-gray-900 shadow-xl overflow-y-auto rounded-l-xl border-l border-gray-700"
+           (click)="$event.stopPropagation()"
+           (keydown)="$event.stopPropagation()"
+           tabindex="-1">
+        <!-- Header -->
+        <div class="px-4 sm:px-6 flex items-center justify-between">
+          <h2 class="text-xl font-bold text-white">Filtres</h2>
           <button
-            (click)="toggleLocation(location)"
-            class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
-            [class.bg-blue-100]="isLocationSelected(location)"
-            [class.text-blue-800]="isLocationSelected(location)"
-            [class.bg-gray-100]="!isLocationSelected(location)"
-            [class.dark:bg-gray-700]="!isLocationSelected(location)"
-            [class.text-gray-800]="!isLocationSelected(location)"
-            [class.dark:text-gray-200]="!isLocationSelected(location)"
+            type="button"
+            (click)="onClose()"
+            class="text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Fermer"
           >
-            {{ location }}
+            <span class="sr-only">Fermer</span>
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
-          }
+        </div>
+
+        <!-- Filter Content -->
+        <div class="mt-6 relative flex-1 px-4 sm:px-6">
+          <form [formGroup]="filterForm" class="space-y-8">
+            
+            <!-- City Selection -->
+            <div>
+              <h3 class="text-lg font-medium text-white mb-4">Ville</h3>
+              
+              <!-- Popular Cities -->
+              <div class="mb-4 flex flex-wrap gap-2">
+                <button
+                  *ngFor="let city of popularCities.slice(0, 8)"
+                  type="button"
+                  (click)="onCitySelect(city)"
+                  class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                  [class.bg-blue-600]="isCitySelected(city)"
+                  [class.text-white]="isCitySelected(city)"
+                  [class.bg-gray-800]="!isCitySelected(city)"
+                  [class.text-gray-300]="!isCitySelected(city)"
+                >
+                  {{ city }}
+                </button>
+                
+                <button
+                  type="button"
+                  (click)="toggleCustomCityInput()"
+                  class="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-800 text-gray-300 flex items-center"
+                >
+                  <span>Autre ville</span>
+                  <svg *ngIf="!showCustomCityInput" class="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                  </svg>
+                  <svg *ngIf="showCustomCityInput" class="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              
+              <!-- More Cities Dropdown -->
+              <div class="mb-4" *ngIf="showCustomCityInput">
+                <input
+                  type="text"
+                  [(ngModel)]="customCity"
+                  (ngModelChange)="onCustomCityChange()"
+                  [ngModelOptions]="{standalone: true}"
+                  placeholder="Saisissez une ville..."
+                  class="w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-800 text-white"
+                />
+              </div>
+            </div>
+            
+            <!-- Category Filter -->
+            <div>
+              <h3 class="text-lg font-medium text-white mb-4">Catégorie</h3>
+              <div class="grid grid-cols-2 gap-2 mb-4">
+                <button
+                  *ngFor="let category of categoryOptions"
+                  type="button"
+                  (click)="onCategorySelect(category.name)"
+                  class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-left"
+                  [class.bg-blue-600]="isCategorySelected(category.name)"
+                  [class.text-white]="isCategorySelected(category.name)"
+                  [class.bg-gray-800]="!isCategorySelected(category.name)"
+                  [class.text-gray-300]="!isCategorySelected(category.name)"
+                >
+                  {{ category.name }}
+                </button>
+              </div>
+              
+              <!-- Subcategories -->
+              <div *ngIf="showSubcategories && getSubcategories().length > 0" class="mt-4 ml-4 border-l-2 border-blue-500 pl-4">
+                <h4 class="text-sm font-medium text-gray-300 mb-2">Sous-catégories</h4>
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    *ngFor="let subcategory of getSubcategories()"
+                    type="button"
+                    (click)="onSubcategorySelect(subcategory)"
+                    class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-left"
+                    [class.bg-blue-600]="isSubcategorySelected(subcategory)"
+                    [class.text-white]="isSubcategorySelected(subcategory)"
+                    [class.bg-gray-800]="!isSubcategorySelected(subcategory)"
+                    [class.text-gray-300]="!isSubcategorySelected(subcategory)"
+                  >
+                    {{ subcategory }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Accessibility Filter -->
+            <div>
+              <h3 class="text-lg font-medium text-white mb-4">Accessibilité</h3>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  *ngFor="let option of accessibilityOptions"
+                  type="button"
+                  (click)="onAccessibilitySelect(option.value)"
+                  class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  [class.bg-blue-600]="isAccessibilitySelected(option.value)"
+                  [class.text-white]="isAccessibilitySelected(option.value)"
+                  [class.bg-gray-800]="!isAccessibilitySelected(option.value)"
+                  [class.text-gray-300]="!isAccessibilitySelected(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
+            
+            <!-- Price Filter -->
+            <div>
+              <h3 class="text-lg font-medium text-white mb-4">Prix</h3>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  *ngFor="let option of priceOptions"
+                  type="button"
+                  (click)="onPriceSelect(option.value)"
+                  class="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  [class.bg-blue-600]="isPriceSelected(option.value)"
+                  [class.text-white]="isPriceSelected(option.value)"
+                  [class.bg-gray-800]="!isPriceSelected(option.value)"
+                  [class.text-gray-300]="!isPriceSelected(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="sticky bottom-0 bg-gray-900 py-4 border-t border-gray-700">
+              <div class="flex space-x-3">
+                <button
+                  type="button"
+                  (click)="onReset()"
+                  class="flex-1 px-4 py-2 border border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Réinitialiser
+                </button>
+                <button
+                  type="button"
+                  (click)="onApply()"
+                  class="flex-1 px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Appliquer
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
-
-      <!-- Age Group -->
-      <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3">
-          Age Group
-        </h3>
-        <div class="flex flex-wrap gap-2">
-          @for (ageGroup of ageGroups; track ageGroup) {
-          <button
-            (click)="toggleAgeGroup(ageGroup)"
-            class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
-            [class.bg-blue-100]="isAgeGroupSelected(ageGroup)"
-            [class.text-blue-800]="isAgeGroupSelected(ageGroup)"
-            [class.bg-gray-100]="!isAgeGroupSelected(ageGroup)"
-            [class.dark:bg-gray-700]="!isAgeGroupSelected(ageGroup)"
-            [class.text-gray-800]="!isAgeGroupSelected(ageGroup)"
-            [class.dark:text-gray-200]="!isAgeGroupSelected(ageGroup)"
-          >
-            {{ ageGroup }}
-          </button>
-          }
-        </div>
-      </div>
-
-      <!-- Time of Day -->
-      <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3">
-          Time of Day
-        </h3>
-        <div class="flex flex-wrap gap-2">
-          @for (time of timeOfDay; track time) {
-          <button
-            (click)="toggleTimeOfDay(time)"
-            class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
-            [class.bg-blue-100]="isTimeOfDaySelected(time)"
-            [class.text-blue-800]="isTimeOfDaySelected(time)"
-            [class.bg-gray-100]="!isTimeOfDaySelected(time)"
-            [class.dark:bg-gray-700]="!isTimeOfDaySelected(time)"
-            [class.text-gray-800]="!isTimeOfDaySelected(time)"
-            [class.dark:text-gray-200]="!isTimeOfDaySelected(time)"
-          >
-            {{ time }}
-          </button>
-          }
-        </div>
-      </div>
-
-      <!-- Budget Range -->
-      <div>
-        <div class="flex justify-between mb-2">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-            Budget Range
-          </h3>
-          <span class="text-gray-600 dark:text-gray-400"
-            >€{{ currentMinBudget }} - €{{ currentMaxBudget }}</span
-          >
-        </div>
-
-        <div class="relative pt-5 pb-2">
-          <!-- Min Thumb -->
-          <input
-            type="range"
-            [(ngModel)]="currentMinBudget"
-            [min]="minBudget"
-            [max]="currentMaxBudget"
-            class="absolute w-full h-1 bg-gray-200 dark:bg-gray-700 rounded appearance-none cursor-pointer"
-          />
-
-          <!-- Max Thumb -->
-          <input
-            type="range"
-            [(ngModel)]="currentMaxBudget"
-            [min]="currentMinBudget"
-            [max]="maxBudget"
-            class="absolute w-full h-1 bg-gray-200 dark:bg-gray-700 rounded appearance-none cursor-pointer"
-          />
-        </div>
-      </div>
-
-      <!-- Category -->
-      <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3">
-          Category
-        </h3>
-        <div class="flex flex-wrap gap-2">
-          @for (category of categories; track category) {
-          <button
-            (click)="toggleCategory(category)"
-            class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
-            [class.bg-blue-100]="isCategorySelected(category)"
-            [class.text-blue-800]="isCategorySelected(category)"
-            [class.bg-gray-100]="!isCategorySelected(category)"
-            [class.dark:bg-gray-700]="!isCategorySelected(category)"
-            [class.text-gray-800]="!isCategorySelected(category)"
-            [class.dark:text-gray-200]="!isCategorySelected(category)"
-          >
-            {{ category }}
-          </button>
-          }
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer Actions -->
-    <div
-      class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between"
-    >
-      <button
-        (click)="onReset()"
-        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-      >
-        Reset All
-      </button>
-      <button
-        (click)="onApply()"
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-      >
-        Apply Filters
-      </button>
     </div>
   </div>
 </div>

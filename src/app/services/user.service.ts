@@ -1,284 +1,249 @@
-import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { delay, map, take } from 'rxjs/operators';
-import { AuthService, User } from './auth.service';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import { catchError, tap, map } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
-export interface UserProfile extends User {
+/**
+ * Interface for User data from the API
+ */
+export interface User {
+  id: number;
+  email: string;
+  roles: string[];
+  enabled: boolean;
+  accountNonLocked: boolean;
+  failedLoginAttempts?: number;
+  createdAt?: string;
+  lastLoginAt?: string;
   firstName?: string;
   lastName?: string;
+  phoneNumber?: string;
+  profilePictureUrl?: string;
   bio?: string;
-  avatar?: string;
-  preferences?: {
-    notifications: boolean;
-    emailUpdates: boolean;
-    activityAlerts: boolean;
-  };
+  notificationsEnabled?: boolean;
+}
+
+/**
+ * Interface for updating user profile
+ */
+export interface UserUpdateRequest {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  profilePictureUrl?: string;
+  bio?: string;
+  notificationsEnabled?: boolean;
+  accountNonLocked?: boolean;
+  enabled?: boolean;
+}
+
+/**
+ * Interface for API responses with a message
+ */
+export interface MessageResponse {
+  message: string;
+}
+
+/**
+ * Interface for password update request
+ */
+export interface PasswordUpdateRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class UserService {
-  private readonly USER_PROFILE_KEY = 'user_profile';
-  private isBrowser: boolean;
+  private apiUrl = `${environment.apiUrl}/users`;
+  private http = inject(HttpClient);
+  private authService = inject(AuthService);
+  
+  private currentUserProfileSubject = new BehaviorSubject<User | null>(null);
+  currentUserProfile$ = this.currentUserProfileSubject.asObservable();
+  
+  constructor() {
+    // Load user profile if user is authenticated
+    this.authService.isAuthenticated$.subscribe(isAuthenticated => {
+      if (isAuthenticated) {
+        this.loadUserProfile();
+      } else {
+        // Clear profile when user logs out
+        this.currentUserProfileSubject.next(null);
+      }
+    });
+  }
 
-  // Mock user profiles for testing
-  private mockProfiles: UserProfile[] = [
-    {
-      id: '1',
-      email: 'user@example.com',
-      name: 'John Doe',
-      role: 'USER',
-      firstName: 'John',
-      lastName: 'Doe',
-      bio: 'Family fun enthusiast and outdoor adventurer',
-      avatar: 'https://i.pravatar.cc/150?u=user@example.com',
-      preferences: {
-        notifications: true,
-        emailUpdates: false,
-        activityAlerts: true,
+  /**
+   * Load current user profile
+   */
+  private loadUserProfile(): void {
+    this.getUserProfile().subscribe({
+      next: (profile) => {
+        this.currentUserProfileSubject.next(profile);
       },
-    },
-    {
-      id: '2',
-      email: 'admin@example.com',
-      name: 'Admin User',
-      role: 'ADMIN',
-      firstName: 'Admin',
-      lastName: 'User',
-      bio: 'System administrator and activity curator',
-      avatar: 'https://i.pravatar.cc/150?u=admin@example.com',
-      preferences: {
-        notifications: true,
-        emailUpdates: true,
-        activityAlerts: true,
-      },
-    },
-  ];
-
-  constructor(
-    private authService: AuthService,
-    @Inject(PLATFORM_ID) private platformId: Object
-  ) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
-    // Initialize user profile in localStorage if not exists
-    this.initUserProfile();
+      error: (error) => {
+        console.error('Error loading user profile:', error);
+      }
+    });
   }
 
   /**
-   * Safely get item from localStorage (only in browser)
+   * Get current user profile
    */
-  private getLocalStorage(key: string): string | null {
-    if (this.isBrowser) {
-      return localStorage.getItem(key);
-    }
-    return null;
-  }
-
-  /**
-   * Safely set item in localStorage (only in browser)
-   */
-  private setLocalStorage(key: string, value: string): void {
-    if (this.isBrowser) {
-      localStorage.setItem(key, value);
-    }
-  }
-
-  /**
-   * Initialize user profile in localStorage if not exists
-   */
-  private initUserProfile(): void {
-    if (!this.isBrowser) return;
-
-    if (!this.getLocalStorage(this.USER_PROFILE_KEY)) {
-      const defaultProfile = this.createDefaultProfile();
-      this.setLocalStorage(
-        this.USER_PROFILE_KEY,
-        JSON.stringify(defaultProfile)
-      );
-    }
-  }
-
-  /**
-   * Get the current user's profile
-   */
-  getUserProfile(): Observable<UserProfile | null> {
-    // Check if user is authenticated
-    if (!this.authService.isAuthenticated()) {
-      return of(null);
-    }
-
-    // Get profile from localStorage
-    const profileJson = localStorage.getItem(this.USER_PROFILE_KEY);
-    if (profileJson) {
-      return of(JSON.parse(profileJson)).pipe(delay(300)); // Simulate API delay
-    }
-
-    // If no profile in localStorage but user is authenticated, create a basic profile
-    return this.authService.currentUser$.pipe(
-      take(1),
-      map((currentUser) => {
-        if (currentUser) {
-          const mockProfile = this.mockProfiles.find(
-            (p) => p.email === currentUser.email
-          );
-          const profile = mockProfile || {
-            ...currentUser,
-            preferences: {
-              notifications: true,
-              emailUpdates: false,
-              activityAlerts: true,
-            },
-          };
-
-          localStorage.setItem(this.USER_PROFILE_KEY, JSON.stringify(profile));
-          return profile;
-        }
-        return null;
-      }),
-      delay(300) // Simulate API delay
+  getUserProfile(): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/me`).pipe(
+      catchError(error => {
+        console.error('Error fetching user profile:', error);
+        return throwError(() => new Error('Failed to fetch user profile'));
+      })
     );
   }
 
   /**
-   * Update user profile
+   * Update current user profile
    */
-  updateUserProfile(profile: Partial<UserProfile>): Observable<UserProfile> {
-    // Check if user is authenticated
-    if (!this.authService.isAuthenticated()) {
-      return throwError(() => new Error('User not authenticated'));
-    }
+  updateUserProfile(profileData: UserUpdateRequest): Observable<MessageResponse> {
+    return this.http.put<MessageResponse>(`${this.apiUrl}/me`, profileData).pipe(
+      tap(() => {
+        // Reload the user profile after update
+        this.loadUserProfile();
+      }),
+      catchError(error => {
+        console.error('Error updating user profile:', error);
+        return throwError(() => new Error('Failed to update user profile'));
+      })
+    );
+  }
 
-    // Get current profile
-    const profileJson = localStorage.getItem(this.USER_PROFILE_KEY);
-    if (!profileJson) {
-      return throwError(() => new Error('Profile not found'));
-    }
-
-    // Update profile
-    const currentProfile: UserProfile = JSON.parse(profileJson);
-    const updatedProfile: UserProfile = { ...currentProfile, ...profile };
-
-    // Don't allow changing email or role through this method
-    updatedProfile.email = currentProfile.email;
-    updatedProfile.role = currentProfile.role;
-
-    // Save updated profile
-    localStorage.setItem(this.USER_PROFILE_KEY, JSON.stringify(updatedProfile));
-
-    // Simulate API delay
-    return of(updatedProfile).pipe(delay(500));
+  /**
+   * Delete current user account
+   */
+  deleteAccount(): Observable<MessageResponse> {
+    return this.http.delete<MessageResponse>(`${this.apiUrl}/me`).pipe(
+      tap(() => {
+        // Log out the user after account deletion
+        this.authService.logout();
+      }),
+      catchError(error => {
+        console.error('Error deleting account:', error);
+        return throwError(() => new Error('Failed to delete account'));
+      })
+    );
   }
 
   /**
    * Update user password
    */
-  updatePassword(
-    currentPassword: string,
-    newPassword: string
-  ): Observable<boolean> {
-    // Check if user is authenticated
-    if (!this.authService.isAuthenticated()) {
-      return throwError(() => new Error('User not authenticated'));
-    }
-
-    // In a real app, we would verify the current password with the backend
-    // For this mock implementation, we'll just simulate success/failure
-
-    // Simulate password verification (in a real app, this would be done on the server)
-    if (currentPassword !== 'password123') {
-      // Using the mock password from requirements
-      return throwError(() => new Error('Current password is incorrect'));
-    }
-
-    // Simulate successful password update
-    return of(true).pipe(delay(500));
-  }
-
-  /**
-   * Get user by ID or email (for searching users to add to groups)
-   */
-  searchUsers(query: string): Observable<UserProfile[]> {
-    // Simulate API search
-    return of(this.mockProfiles).pipe(
-      map((profiles) =>
-        profiles.filter(
-          (profile) =>
-            profile.email.toLowerCase().includes(query.toLowerCase()) ||
-            profile.name?.toLowerCase().includes(query.toLowerCase()) ||
-            profile.firstName?.toLowerCase().includes(query.toLowerCase()) ||
-            profile.lastName?.toLowerCase().includes(query.toLowerCase())
-        )
-      ),
-      delay(300) // Simulate API delay
+  updatePassword(passwordData: PasswordUpdateRequest): Observable<MessageResponse> {
+    return this.http.put<MessageResponse>(`${this.apiUrl}/me/password`, passwordData).pipe(
+      catchError(error => {
+        console.error('Error updating password:', error);
+        return throwError(() => new Error('Failed to update password'));
+      })
     );
   }
 
   /**
-   * Get user by email
+   * Get user by ID (admin only)
    */
-  getUserByEmail(email: string): Observable<UserProfile | null> {
-    // Simulate API search
-    return of(
-      this.mockProfiles.find((profile) => profile.email === email) || null
-    ).pipe(delay(300)); // Simulate API delay
+  getUserById(userId: number): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/${userId}`).pipe(
+      catchError(error => {
+        console.error(`Error fetching user with ID ${userId}:`, error);
+        return throwError(() => new Error(`Failed to fetch user with ID ${userId}`));
+      })
+    );
   }
 
   /**
-   * Save user profile to localStorage
+   * Get all users
    */
-  private saveProfile(profile: any): void {
-    if (!this.isBrowser) return;
-
-    this.setLocalStorage(this.USER_PROFILE_KEY, JSON.stringify(profile));
+  getAllUsers(): Observable<User[]> {
+    console.log('Fetching all users');
+    return this.http.get<User[]>(this.apiUrl).pipe(
+      catchError(error => {
+        console.error('Error fetching all users:', error);
+        return throwError(() => new Error('Failed to fetch all users'));
+      })
+    );
   }
 
   /**
-   * Get user profile from localStorage
+   * Update user (admin only)
    */
-  private getProfile(): any {
-    if (!this.isBrowser) return null;
-
-    // Get profile from localStorage
-    const profileJson = this.getLocalStorage(this.USER_PROFILE_KEY);
-
-    if (profileJson) {
-      try {
-        return JSON.parse(profileJson);
-      } catch (e) {
-        console.error('Error parsing user profile:', e);
-        return null;
-      }
-    }
-
-    // If no profile in localStorage but user is authenticated, create a basic profile
-    if (this.authService.isAuthenticated()) {
-      const profile = this.createDefaultProfile();
-      this.saveProfile(profile);
-      return profile;
-    }
-
-    return null;
+  updateUser(userId: number, userData: UserUpdateRequest): Observable<MessageResponse> {
+    return this.http.put<MessageResponse>(`${this.apiUrl}/${userId}`, userData).pipe(
+      catchError(error => {
+        console.error(`Error updating user with ID ${userId}:`, error);
+        return throwError(() => new Error(`Failed to update user with ID ${userId}`));
+      })
+    );
   }
 
-  private createDefaultProfile(): UserProfile {
-    // Implement the logic to create a default profile based on the current user's information
-    // This is a placeholder and should be replaced with the actual implementation
-    return {
-      id: 'default',
-      email: 'default@example.com',
-      name: 'Default User',
-      role: 'USER',
-      firstName: 'Default',
-      lastName: 'User',
-      bio: 'This is a default user profile',
-      avatar: 'https://i.pravatar.cc/150?u=default@example.com',
-      preferences: {
-        notifications: true,
-        emailUpdates: false,
-        activityAlerts: true,
-      },
-    };
+  /**
+   * Delete user (admin only)
+   */
+  deleteUser(userId: number): Observable<MessageResponse> {
+    return this.http.delete<MessageResponse>(`${this.apiUrl}/${userId}`).pipe(
+      catchError(error => {
+        console.error(`Error deleting user with ID ${userId}:`, error);
+        return throwError(() => new Error(`Failed to delete user with ID ${userId}`));
+      })
+    );
+  }
+
+  /**
+   * Lock or unlock a user account (admin only)
+   */
+  updateAccountLockStatus(userId: number, shouldBeUnlocked: boolean): Observable<MessageResponse> {
+    return this.updateUser(userId, { accountNonLocked: shouldBeUnlocked });
+  }
+
+  /**
+   * Enable or disable a user account (admin only)
+   */
+  updateAccountEnabledStatus(userId: number, shouldBeEnabled: boolean): Observable<MessageResponse> {
+    return this.updateUser(userId, { enabled: shouldBeEnabled });
+  }
+
+  /**
+   * Check if the current user has admin role
+   */
+  isAdmin(): Observable<boolean> {
+    return this.authService.currentUser$.pipe(
+      map(user => {
+        if (!user) return false;
+        return user.roles.includes('ROLE_ADMIN');
+      })
+    );
+  }
+
+  /**
+   * Search for users by name or email (for admin or user discovery features)
+   */
+  searchUsers(query: string): Observable<User[]> {
+    // Since there's no specific search endpoint in the API requirements,
+    // we'll get all users and filter them on the client side
+    return this.getAllUsers().pipe(
+      map(users => {
+        if (!query) return users;
+        
+        const lowerQuery = query.toLowerCase();
+        return users.filter(user => 
+          user.email.toLowerCase().includes(lowerQuery) ||
+          (user.firstName && user.firstName.toLowerCase().includes(lowerQuery)) ||
+          (user.lastName && user.lastName.toLowerCase().includes(lowerQuery))
+        );
+      }),
+      catchError(error => {
+        console.error('Error searching users:', error);
+        return throwError(() => new Error('Failed to search users'));
+      })
+    );
   }
 }

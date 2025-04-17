@@ -5,10 +5,8 @@ import { RegisterComponent } from './components/register/register.component';
 import { HomeComponent } from './components/home/home.component';
 import { GroupsComponent } from './components/groups/groups.component';
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
-import { ActivityComponent } from './components/activity/activity.component';
 import { ActivityDetailComponent } from './components/activity-detail/activity-detail.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
-import { UserPreferencesComponent } from './components/user-preferences/user-preferences.component';
 import { LikedActivitiesComponent } from './components/liked-activities/liked-activities.component';
 import { WeatherComponent } from './components/weather/weather.component';
 import { AuthService } from './services/auth.service';
@@ -33,10 +31,9 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'home', component: HomeComponent },
-  { path: 'activities', component: ActivityComponent },
   { path: 'activities/:id', component: ActivityDetailComponent },
   {
-    path: 'profile',
+    path: 'user-profile',
     component: UserProfileComponent,
     canActivate: [() => authGuard()],
   },
@@ -56,12 +53,12 @@ export const routes: Routes = [
     canActivate: [() => authGuard()],
   },
   {
-    path: 'user-preferences',
-    component: UserPreferencesComponent,
+    path: 'profile',
+    component: UserProfileComponent,
     canActivate: [() => authGuard()],
   },
   {
-    path: 'liked-activities',
+    path: 'favorites',
     component: LikedActivitiesComponent,
     canActivate: [() => authGuard()],
   },

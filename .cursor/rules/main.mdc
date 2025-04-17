@@ -1,7 +1,7 @@
 ---
-description: You are an expert in Angular 19, JavaScript, TypeScript, and modern front-end development best practices, including TailwindCSS v4.
+description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 Key Principles:
   - Enforce best practices for Angular component structure and architecture.

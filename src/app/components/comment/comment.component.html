@@ -78,9 +78,14 @@
     <p class="font-medium">Want to join the conversation?</p>
     <p class="text-sm">
       Please
-      <a routerLink="/login" class="underline font-medium text-blue-300"
-        >log in</a
+      <button
+        (click)="navigateToLogin()"
+        (keydown.enter)="navigateToLogin()"
+        class="underline font-medium text-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 rounded-sm"
+        aria-label="Log in to leave comments"
       >
+        log in
+      </button>
       to leave a comment.
     </p>
   </div>
@@ -93,28 +98,167 @@
 
     <div
       *ngFor="let comment of comments"
-      class="border-b border-gray-700 pb-6 last:border-0"
+      class="border-b border-gray-700 pb-6 last:border-0 mb-6"
+      [ngClass]="{
+        'bg-blue-900/10 rounded-lg p-4 border border-blue-800/30': isCurrentUserComment(comment)
+      }"
     >
-      <div class="flex justify-between items-start">
+      <!-- Regular Comment View (non-editing mode) -->
+      <div *ngIf="!comment.isEditing" class="flex justify-between items-start">
         <div class="flex items-start">
           <div class="flex-shrink-0 mr-3">
             <div
-              class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white"
+              class="w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white"
+              [ngClass]="{
+                'from-blue-600 to-blue-800': isCurrentUserComment(comment),
+                'from-gray-700 to-gray-900': !isCurrentUserComment(comment)
+              }"
             >
-              {{ comment.user.charAt(0).toUpperCase() }}
+              {{ getUserInitial(getUserEmail(comment)) }}
             </div>
           </div>
-          <div>
-            <p class="font-medium text-white">{{ comment.user }}</p>
-            <p class="text-sm text-gray-300">
-              {{ formatTimestamp(comment.timestamp) }}
-            </p>
+          <div class="flex-1">
+            <div class="flex justify-between w-full">
+              <div>
+                <p class="font-medium text-white">{{ getUserEmail(comment) }}</p>
+                <p class="text-xs text-gray-400">
+                  {{ getRelativeTime(comment.createdDate) }}
+                  <span *ngIf="comment.createdDate !== comment.updatedDate" class="italic ml-1">
+                    (edited)
+                  </span>
+                </p>
+              </div>
+              
+              <div *ngIf="isCurrentUserComment(comment)" class="flex space-x-2">
+                <button 
+                  (click)="startEditComment(comment)"
+                  class="text-blue-400 hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
+                  aria-label="Edit comment"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button 
+                  (click)="deleteComment(comment.id)"
+                  class="text-red-400 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-full p-1"
+                  aria-label="Delete comment"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
             <div class="mt-2 text-white">
-              {{ comment.text }}
+              {{ comment.content }}
             </div>
           </div>
         </div>
       </div>
+      
+      <!-- Edit Comment Form -->
+      <div *ngIf="comment.isEditing" class="mt-2">
+        <form [formGroup]="editForm" (ngSubmit)="submitEditComment()" class="space-y-4">
+          <div>
+            <div class="relative">
+              <textarea
+                formControlName="content"
+                rows="3"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-800 text-white"
+                [ngClass]="{
+                  'border-red-500': hasError('content', editForm),
+                  'border-gray-700': !hasError('content', editForm)
+                }"
+              ></textarea>
+              <div *ngIf="hasError('content', editForm)" class="text-red-400 text-sm mt-1">
+                {{ getErrorMessage('content', editForm) }}
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3">
+            <button
+              type="button"
+              (click)="cancelEditComment()"
+              class="bg-gray-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="bg-blue-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              [disabled]="editForm.invalid || isSubmitting"
+            >
+              <span *ngIf="isSubmitting" class="flex items-center justify-center">
+                <svg
+                  class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Updating...
+              </span>
+              <span *ngIf="!isSubmitting">Update Comment</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<app-dialog
+  [showDialog]="showDeleteDialog"
+  (closeDialog)="closeDeleteDialog()"
+  title="Delete Comment"
+  size="sm"
+>
+  <div class="p-6">
+    <div class="text-center mb-6">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+      <h3 class="text-lg font-medium text-white">Are you sure you want to delete this comment?</h3>
+      <p class="text-gray-400 mt-2">This action cannot be undone.</p>
+    </div>
+    
+    <div class="flex justify-center space-x-4">
+      <button
+        (click)="closeDeleteDialog()"
+        class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+      >
+        Cancel
+      </button>
+      
+      <button
+        (click)="confirmDeleteComment()"
+        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 flex items-center"
+        [disabled]="isSubmitting"
+      >
+        <span *ngIf="isSubmitting" class="inline-block mr-2">
+          <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </span>
+        Delete Comment
+      </button>
+    </div>
+  </div>
+</app-dialog>

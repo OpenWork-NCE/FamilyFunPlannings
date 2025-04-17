@@ -1,0 +1,514 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Family Fun Plannings Service Architecture Guide
+
+---
+globs: ["src/app/services/**/*.ts"]
+---
+
+## 1. Service Architecture Overview
+
+The application is structured around a comprehensive set of interconnected services that handle specific domains of functionality:
+
+### Core Services
+
+- **ActivityService**: Central service managing activity data, search, filtering, and basic social interactions
+- **AuthService**: Handles user authentication, registration, and session management
+- **UserService**: Manages user profiles and account operations
+
+### Social Interaction Services
+
+- **FavoritesService**: Manages user favorites with comprehensive CRUD operations
+- **CommentService**: Handles activity comments and content moderation
+- **RatingService**: Manages activity ratings and review content
+
+### Group & Planning Services
+
+- **GroupService**: Manages user groups, membership, and group activities
+- **CalendarService**: Handles event scheduling and calendar management
+- **WeatherService**: Provides weather data and weather-based activity suggestions
+
+### UI Services
+
+- **ThemeService**: Manages application theme (light/dark) with system preference detection
+
+## 2. Service Relationships & Dependencies
+
+```
+                     ┌─────────────┐
+                     │  AuthService│
+                     └──────┬──────┘
+                            │
+                ┌───────────┼───────────┐
+                │           │           │
+         ┌──────▼─────┐ ┌───▼───┐ ┌────▼───────┐
+         │UserService │ │GroupSvc│ │ActivitySvc │◄────┐
+         └──────┬─────┘ └───┬───┘ └────┬───────┘     │
+                │           │          │             │
+                │      ┌────▼────┐     │        ┌────▼────┐
+                │      │Calendar │     │        │WeatherSvc│
+                │      │Service  │     │        └─────────┘
+                │      └─────────┘     │
+                │                  ┌───▼────┐
+                └──────────────►   │FavoritesSvc│
+                                   └────┬─────┘
+                                        │
+                              ┌─────────┴─────────┐
+                              │                   │
+                        ┌─────▼─────┐      ┌──────▼─────┐
+                        │CommentSvc │      │ RatingSvc  │
+                        └───────────┘      └────────────┘
+```
+
+### Key Dependencies
+
+1. **Auth-Dependent Services**:
+   - Most services subscribe to `authService.isAuthenticated$` to reload data when auth state changes
+   - GroupService, CalendarService, FavoritesService all load user-specific data on authentication
+
+2. **Activity-Related Services**:
+   - CommentService, RatingService, and FavoritesService all reference activities by ID
+   - WeatherService provides activity suggestions based on weather conditions
+
+## 3. Data Flow Patterns
+
+### Reactive Data Flow
+
+The application uses a combination of RxJS Observables and Angular Signals for reactive state management:
+
+1. **BehaviorSubjects**: Used for maintaining observable state in services
+   - `favoritesSubject` in FavoritesService
+   - `eventsSubject` in CalendarService
+   - `groupsSubject` in GroupService
+
+2. **Signals**: Used for reactive UI state in ActivityService
+   - `activities = signal<Activity[]>([])`
+   - `filteredActivities = signal<Activity[]>([])`
+   - `currentFilter = signal<ActivityFilter>({})`
+
+3. **Service-to-Component Flow**:
+   ```
+   Service (API Call) → BehaviorSubject/Signal → Component (Subscribe/consume) → UI
+   ```
+
+4. **Component-to-Service Flow**:
+   ```
+   UI Event → Component Method → Service Method → API Call → Update BehaviorSubject/Signal
+   ```
+
+## 4. Common Service Patterns
+
+### API Integration Pattern
+
+```typescript
+methodName(params): Observable<ReturnType> {
+  console.log(`[ServiceName] Operation description: ${params}`);
+  return this.http.method<ReturnType>(`${this.apiUrl}/endpoint`, params).pipe(
+    tap(data => console.log(`[ServiceName] Success message: ${data}`)),
+    catchError(error => {
+      console.error(`[ServiceName] Error message: ${params}`, error);
+      return throwError(() => new Error('User-friendly error message'));
+    })
+  );
+}
+```
+
+### State Management Pattern
+
+```typescript
+private dataSubject = new BehaviorSubject<DataType[]>([]);
+data$ = this.dataSubject.asObservable();
+
+private loadData(): void {
+  this.fetchData().subscribe({
+    next: (data) => {
+      this.dataSubject.next(data);
+    },
+    error: (error) => {
+      console.error('[ServiceName] Error loading data:', error);
+    }
+  });
+}
+```
+
+### Authentication Integration Pattern
+
+```typescript
+constructor() {
+  this.authService.isAuthenticated$.subscribe(isAuthenticated => {
+    if (isAuthenticated) {
+      this.loadUserData();
+    } else {
+      this.clearUserData();
+    }
+  });
+}
+```
+
+## 5. Building UI Components with Services
+
+### Component Architecture
+
+Organize components by feature, with each feature typically using multiple services:
+
+```
+/app
+  /features
+    /activities
+      activity-list.component.ts      # Uses ActivityService
+      activity-details.component.ts   # Uses ActivityService, CommentService, RatingService
+      activity-filter.component.ts    # Uses ActivityService
+    /favorites
+      favorites-list.component.ts     # Uses FavoritesService, ActivityService
+    /groups
+      group-list.component.ts         # Uses GroupService
+      group-details.component.ts      # Uses GroupService, CalendarService
+```
+
+### Component Implementation Patterns
+
+#### 1. Smart/Container Components
+
+```typescript
+@Component({
+  selector: 'app-activity-list',
+  templateUrl: './activity-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class ActivityListComponent implements OnInit, OnDestroy {
+  activities: Activity[] = [];
+  loading = true;
+  error: string | null = null;
+  private destroy$ = new Subject<void>();
+
+  constructor(private activityService: ActivityService) {}
+
+  ngOnInit(): void {
+    this.loadActivities();
+  }
+
+  loadActivities(): void {
+    this.loading = true;
+    this.activityService.getAllActivities()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (activities) => {
+          this.activities = activities;
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = 'Failed to load activities. Please try again.';
+          this.loading = false;
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+}
+```
+
+#### 2. Presentation Components
+
+```typescript
+@Component({
+  selector: 'app-activity-card',
+  templateUrl: './activity-card.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  inputs: ['activity'],
+  outputs: ['like', 'favorite', 'viewDetails']
+})
+export class ActivityCardComponent {
+  @Input() activity!: Activity;
+  @Output() like = new EventEmitter<string>();
+  @Output() favorite = new EventEmitter<string>();
+  @Output() viewDetails = new EventEmitter<string>();
+
+  // Methods for UI interactions
+  onLikeClick(): void {
+    this.like.emit(this.activity.id);
+  }
+
+  onFavoriteClick(): void {
+    this.favorite.emit(this.activity.id);
+  }
+
+  onViewDetailsClick(): void {
+    this.viewDetails.emit(this.activity.id);
+  }
+}
+```
+
+### Service Integration Patterns
+
+#### 1. Using Multiple Services in a Component
+
+```typescript
+@Component({
+  selector: 'app-activity-details',
+  templateUrl: './activity-details.component.html'
+})
+export class ActivityDetailsComponent implements OnInit {
+  activity: Activity | null = null;
+  comments: Comment[] = [];
+  ratings: Rating[] = [];
+  isFavorited = false;
+  userRating = 0;
+  loading = {
+    activity: true,
+    comments: true,
+    ratings: true
+  };
+
+  constructor(
+    private activityService: ActivityService,
+    private commentService: CommentService,
+    private ratingService: RatingService,
+    private favoritesService: FavoritesService,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.route.paramMap.pipe(
+      switchMap(params => {
+        const activityId = params.get('id')!;
+        return forkJoin({
+          activity: this.activityService.getActivityById(activityId),
+          comments: this.commentService.getCommentsByActivityId(activityId),
+          ratings: this.ratingService.getRatingsByActivityId(activityId),
+          isFavorite: this.favoritesService.checkIsFavorite(activityId),
+          userRating: this.ratingService.hasRatedActivity(activityId)
+        });
+      })
+    ).subscribe({
+      next: (data) => {
+        this.activity = data.activity;
+        this.comments = data.comments;
+        this.ratings = data.ratings;
+        this.isFavorited = data.isFavorite;
+        // Handle other data
+        this.loading = {
+          activity: false,
+          comments: false,
+          ratings: false
+        };
+      },
+      error: (err) => {
+        // Handle errors
+      }
+    });
+  }
+
+  // Other methods for user interactions
+}
+```
+
+#### 2. Using Signal-Based Services
+
+```typescript
+@Component({
+  selector: 'app-activity-filter',
+  templateUrl: './activity-filter.component.html'
+})
+export class ActivityFilterComponent implements OnInit {
+  categories: string[] = [];
+  cities: string[] = [];
+  tags: string[] = [];
+  
+  // Form for filters
+  filterForm = new FormGroup({
+    categories: new FormControl([]),
+    city: new FormControl(''),
+    tags: new FormControl([])
+  });
+
+  // Use computed signals from service
+  filteredActivities = this.activityService.filteredActivities;
+  currentFilter = this.activityService.currentFilter;
+
+  constructor(private activityService: ActivityService) {}
+
+  ngOnInit(): void {
+    // Load filter options
+    this.activityService.getCategories().subscribe(categories => this.categories = categories);
+    this.activityService.getCities().subscribe(cities => this.cities = cities);
+    this.activityService.getTags().subscribe(tags => this.tags = tags);
+  }
+
+  applyFilters(): void {
+    const filter: ActivityFilter = this.filterForm.value as ActivityFilter;
+    this.activityService.applyFilters(filter);
+  }
+
+  resetFilters(): void {
+    this.filterForm.reset();
+    this.activityService.resetFilters();
+  }
+}
+```
+
+## 6. Best Practices for Service Integration
+
+### 1. Subscription Management
+
+Always manage subscriptions to prevent memory leaks:
+
+```typescript
+private destroy$ = new Subject<void>();
+
+ngOnInit() {
+  this.service.getData()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(data => this.data = data);
+}
+
+ngOnDestroy() {
+  this.destroy$.next();
+  this.destroy$.complete();
+}
+```
+
+### 2. Loading & Error States
+
+Always handle loading and error states for better UX:
+
+```typescript
+loading = true;
+error: string | null = null;
+
+loadData() {
+  this.loading = true;
+  this.error = null;
+  this.service.getData().subscribe({
+    next: (data) => {
+      this.data = data;
+      this.loading = false;
+    },
+    error: (err) => {
+      this.error = 'Failed to load data';
+      this.loading = false;
+    }
+  });
+}
+```
+
+### 3. Use OnPush Change Detection
+
+Optimize performance with OnPush change detection:
+
+```typescript
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+```
+
+### 4. Prefer Observables and Signals for State
+
+Use reactive patterns for state management:
+
+```typescript
+// In component
+viewModel$ = this.service.data$.pipe(
+  map(data => this.transformForView(data)),
+  catchError(err => {
+    this.handleError(err);
+    return of({ error: true });
+  })
+);
+
+// In template
+<ng-container *ngIf="viewModel$ | async as vm">
+  <div *ngIf="!vm.error">
+    {{ vm.someProperty }}
+  </div>
+</ng-container>
+```
+
+### 5. Use Service Composition
+
+Combine multiple services in facades for complex features:
+
+```typescript
+@Injectable({
+  providedIn: 'root'
+})
+export class ActivityFacadeService {
+  constructor(
+    private activityService: ActivityService,
+    private commentService: CommentService,
+    private ratingService: RatingService,
+    private favoriteService: FavoritesService
+  ) {}
+  
+  getCompleteActivityData(id: string) {
+    return forkJoin({
+      activity: this.activityService.getActivityById(id),
+      comments: this.commentService.getCommentsByActivityId(id),
+      ratings: this.ratingService.getRatingStats(id),
+      isFavorite: this.favoriteService.checkIsFavorite(id)
+    });
+  }
+}
+```
+
+## 7. Logging Practices
+
+### Consistent Log Format
+
+Use consistent prefixes and formatting for logs:
+
+```typescript
+console.log(`[ServiceName] Action description: ${paramValue}`);
+console.error(`[ServiceName] Error in operation: ${errorDetails}`);
+```
+
+### Logging Levels
+
+Use appropriate logging levels for different types of information:
+
+```typescript
+// For initialization and lifecycle events
+console.log('[ServiceName] Initializing service');
+
+// For successful operations
+console.log(`[ServiceName] Operation completed with result: ${result}`);
+
+// For potential issues
+console.warn(`[ServiceName] Potential issue detected: ${details}`);
+
+// For errors
+console.error(`[ServiceName] Error performing operation:`, error);
+```
+
+### Group Related Logs
+
+Use log groups for complex operations:
+
+```typescript
+console.group('[ServiceName] Complex operation');
+console.log('Step 1: Initial setup');
+// operation code
+console.log('Step 2: Processing data');
+// more code
+console.log('Step 3: Finalization');
+console.groupEnd();
+```
+
+### Structured Data Logging
+
+Log structured data for complex objects:
+
+```typescript
+console.log(`[ServiceName] Data received:`, {
+  count: data.length,
+  firstItem: data[0],
+  timestamp: new Date().toISOString()
+});
+```

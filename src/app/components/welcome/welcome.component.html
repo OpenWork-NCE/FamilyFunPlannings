@@ -1,92 +1,153 @@
-<!-- Full screen gradient background -->
-<div
-  class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4"
->
-  <!-- Welcome card -->
-  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
-    <!-- Header -->
+<!-- Immersive full-screen background with animated gradient -->
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900 p-4 relative overflow-hidden">
+  <!-- Animated background elements -->
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-0 left-0 w-full h-full opacity-20">
+      <svg viewBox="0 0 800 800" class="absolute top-0 left-0 w-full h-full">
+        <defs>
+          <radialGradient id="a" cx="400" cy="400" r="50%" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="#4f46e5" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <circle fill="url(#a)" cx="400" cy="400" r="400" />
+      </svg>
+    </div>
+    <div class="absolute top-40 right-20 w-72 h-72 bg-blue-400 rounded-full filter blur-3xl opacity-20 animate-blob"></div>
+    <div class="absolute bottom-40 left-20 w-72 h-72 bg-purple-400 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+    <div class="absolute top-1/4 left-1/3 w-72 h-72 bg-indigo-400 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+  </div>
+
+  <!-- Welcome Card with glass effect -->
+  <div class="w-full max-w-lg bg-gray-800/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 space-y-6 border border-white/20 transform transition-all hover:shadow-indigo-500/25">
+    <!-- Logo and Header -->
     <div class="text-center">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+      <div class="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-600 text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      </div>
+      <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tight mb-2">
         Family Fun Plannings
       </h1>
-      <p class="text-gray-600">Plan and organize your family activities</p>
+      <p class="text-gray-300 text-lg">Plan memorable experiences together</p>
     </div>
 
-    <!-- Carousel Content -->
-    <div class="flex flex-col items-center">
-      <!-- Central Illustration in circular frame -->
-      <div
-        class="w-48 h-48 mb-6 overflow-hidden rounded-full bg-white shadow-md"
+    <!-- Carousel with fade transition -->
+    <div class="flex flex-col items-center relative overflow-hidden py-4">
+      <!-- Central Illustration with animated border -->
+      <div class="w-56 h-56 mb-6 rounded-full p-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 animate-spin-slow">
+        <div class="w-full h-full rounded-full overflow-hidden bg-gray-800">
+          <img
+            [src]="slides[currentSlideIndex()].imageUrl"
+            [alt]="slides[currentSlideIndex()].headline"
+            class="w-full h-full object-cover transition-opacity duration-500"
+            onerror="this.src='https://via.placeholder.com/400?text=Family+Activities'"
+          />
+        </div>
+      </div>
+
+      <!-- Text content with animation -->
+      <div class="text-center px-4 h-28 flex flex-col items-center justify-center">
+        <h2 class="text-2xl font-bold text-white mb-2 transition-all duration-300 ease-in-out">
+          {{ slides[currentSlideIndex()].headline }}
+        </h2>
+        <p class="text-gray-300 transition-all duration-300 ease-in-out">
+          {{ slides[currentSlideIndex()].subtitle }}
+        </p>
+      </div>
+
+      <!-- Carousel Controls -->
+      <div class="flex items-center justify-between w-full my-4">
+        <button 
+          (click)="prevSlide()" 
+          class="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-900/30 transition-colors"
+          aria-label="Previous slide"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        
+        <!-- Pagination dots -->
+        <div class="flex items-center justify-center space-x-2">
+          @for (slide of slides; track $index) {
+          <button
+            (click)="goToSlide($index)"
+            class="w-3 h-3 rounded-full transition-all duration-300 hover:scale-125"
+            [class.bg-indigo-600]="isActiveSlide($index)"
+            [class.w-6]="isActiveSlide($index)"
+            [class.bg-gray-600]="!isActiveSlide($index)"
+            [attr.aria-label]="'Go to slide ' + ($index + 1)"
+          ></button>
+          }
+        </div>
+        
+        <button 
+          (click)="nextSlide()" 
+          class="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-900/30 transition-colors"
+          aria-label="Next slide"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Separator -->
+    <div class="relative">
+      <div class="absolute inset-0 flex items-center">
+        <div class="w-full border-t border-gray-700"></div>
+      </div>
+      <div class="relative flex justify-center text-sm">
+        <span class="px-2 bg-gray-800 text-indigo-400 font-medium">Get Started</span>
+      </div>
+    </div>
+
+    <!-- Action Buttons with hover effects -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <button
+        class="group relative flex items-center justify-center py-3 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        routerLink="/login"
       >
-        <img
-          [src]="slides[currentSlideIndex()].imageUrl"
-          [alt]="slides[currentSlideIndex()].headline"
-          class="w-full h-full object-cover"
-          onerror="this.src='https://via.placeholder.com/400?text=Family+Activities'"
-        />
-      </div>
-
-      <!-- Headline Text -->
-      <h2 class="mb-2 text-xl font-bold text-center text-gray-900">
-        {{ slides[currentSlideIndex()].headline }}
-      </h2>
-
-      <!-- Subtitle Text -->
-      <p class="mb-6 text-base text-center text-gray-600">
-        {{ slides[currentSlideIndex()].subtitle }}
-      </p>
-
-      <!-- Carousel Pagination (Dots) -->
-      <div class="flex items-center justify-center mt-4 space-x-2">
-        @for (slide of slides; track $index) {
-        <button
-          (click)="goToSlide($index)"
-          class="w-3 h-3 rounded-full transition-colors duration-200"
-          [class.bg-blue-600]="isActiveSlide($index)"
-          [class.bg-gray-300]="!isActiveSlide($index)"
-          [attr.aria-label]="'Go to slide ' + ($index + 1)"
-        ></button>
-        }
-      </div>
+        <span class="absolute right-0 -mt-12 -mr-12 h-32 w-32 rounded-full block bg-blue-500 opacity-20 transform rotate-45 group-hover:scale-150 transition-transform duration-500"></span>
+        <span class="absolute bottom-0 left-0 -ml-12 -mb-12 h-32 w-32 rounded-full block bg-indigo-500 opacity-20 transform rotate-45 group-hover:scale-150 transition-transform duration-500"></span>
+        <span class="relative flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+          </svg>
+          Log in
+        </span>
+      </button>
+      <button
+        class="group relative flex items-center justify-center py-3 px-5 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-medium rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+        routerLink="/register"
+      >
+        <span class="absolute right-0 -mt-12 -mr-12 h-32 w-32 rounded-full block bg-purple-500 opacity-20 transform rotate-45 group-hover:scale-150 transition-transform duration-500"></span>
+        <span class="absolute bottom-0 left-0 -ml-12 -mb-12 h-32 w-32 rounded-full block bg-pink-500 opacity-20 transform rotate-45 group-hover:scale-150 transition-transform duration-500"></span>
+        <span class="relative flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+          Join now
+        </span>
+      </button>
     </div>
 
-    <!-- Additional options -->
-    <div class="space-y-4">
-      <div class="relative">
-        <div class="absolute inset-0 flex items-center">
-          <div class="w-full border-t border-gray-300"></div>
-        </div>
-        <div class="relative flex justify-center text-sm">
-          <span class="px-2 bg-white text-gray-500">Get Started</span>
-        </div>
-      </div>
-
-      <!-- Login and Register buttons -->
-      <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-        <button
-          class="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-          routerLink="/login"
-        >
-          Log in
-        </button>
-        <button
-          class="flex-1 bg-green-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-          routerLink="/register"
-        >
-          Join now
-        </button>
-      </div>
-
-      <!-- Continue as guest -->
-      <div class="text-center">
-        <button
-          type="button"
-          routerLink="/home"
-          class="text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none focus:underline transition-colors"
-        >
-          Continue as guest
-        </button>
-      </div>
+    <!-- Guest access -->
+    <div class="text-center">
+      <button
+        type="button"
+        routerLink="/home"
+        class="inline-flex items-center text-sm font-medium text-gray-300 hover:text-indigo-400 focus:outline-none focus:underline transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+        Explore as guest
+      </button>
     </div>
   </div>
 </div>

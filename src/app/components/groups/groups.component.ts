@@ -12,12 +12,10 @@ import {
   GroupActivity,
   GroupService,
 } from '../../services/group.service';
-import { UserProfile, UserService } from '../../services/user.service';
+import { User, UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { DialogComponent } from '../dialog/dialog.component';
 import {
-  BehaviorSubject,
-  Observable,
   Subject,
   Subscription,
   debounceTime,
@@ -46,8 +44,10 @@ import { Activity, ActivityService } from '../../services/activity.service';
 export class GroupsComponent implements OnInit, OnDestroy {
   // Group data
   ownedGroups: Group[] = [];
-  addedGroups: Group[] = [];
+  memberGroups: Group[] = [];
+  addedGroups: Group[] = []; // used in HTML for joined-groups
   currentGroup: Group | null = null;
+  groupActivities: GroupActivity[] = [];
 
   // UI state
   isLoading = true;
@@ -59,12 +59,17 @@ export class GroupsComponent implements OnInit, OnDestroy {
   createGroupForm!: FormGroup;
   editGroupForm!: FormGroup;
   activityForm!: FormGroup;
+  editActivityForm!: FormGroup;
 
   // Modals
   showCreateGroupModal = false;
   showEditGroupModal = false;
   showAddMemberModal = false;
   showAddActivityModal = false;
+  showDeleteGroupDialog = false;
+  showEditActivityDialog = false;
+  showDeleteActivityDialog = false;
+  currentActivityId: number | null = null;
 
   // Error and success states
   errorMessage = '';
@@ -72,16 +77,28 @@ export class GroupsComponent implements OnInit, OnDestroy {
 
   // Member search
   searchTerm = new Subject<string>();
-  searchResults: UserProfile[] = [];
+  searchResults: User[] = [];
   isSearching = false;
 
   // Current user
-  private currentUserEmail: string = '';
+  currentUser: User | null = null;
   private subscriptions: Subscription = new Subscription();
 
   // Activity management
   activities: Activity[] = [];
+  currentActivity: GroupActivity | null = null;
   isLoadingActivities = false;
+  
+  // Cities
+  availableCities: string[] = ['Paris', 'London', 'New York', 'Berlin', 'Rome'];
+  selectedCity = 'Paris';
+
+  // Fix the getValue error by using a string variable
+  private searchTermLower = '';
+
+  // Add a property to track the member to remove and the dialog state
+  showDeleteMemberDialog = false;
+  memberToRemove: { id: number; email: string } | null = null;
 
   constructor(
     private groupService: GroupService,
@@ -100,11 +117,19 @@ export class GroupsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Get current user email
+    // Get current user
     const userSub = this.authService.currentUser$
       .pipe(take(1))
       .subscribe((user) => {
-        this.currentUserEmail = user?.email || '';
+        if (user) {
+          this.currentUser = {
+            id: user.id,
+            email: user.email,
+            roles: user.roles,
+            enabled: true,
+            accountNonLocked: true
+          };
+        }
       });
     this.subscriptions.add(userSub);
 
@@ -114,7 +139,7 @@ export class GroupsComponent implements OnInit, OnDestroy {
     // Check route parameters for group ID
     const routeSub = this.route.params.subscribe((params) => {
       if (params['id']) {
-        this.loadGroupDetails(params['id']);
+        this.loadGroupDetails(Number(params['id']));
       } else {
         this.loadGroups();
       }
@@ -131,16 +156,24 @@ export class GroupsComponent implements OnInit, OnDestroy {
             return of([]);
           }
           this.isSearching = true;
-          return this.userService.searchUsers(term);
+          this.searchTermLower = term.toLowerCase();
+          // Use getAllUsers instead of searchUsers and filter on the client side
+          return this.userService.getAllUsers();
         })
       )
       .subscribe({
         next: (results) => {
-          this.searchResults = results;
+          // Remove the current user and filter results that match the search term
+          this.searchResults = results.filter(user => 
+            user.id !== this.currentUser?.id && 
+            (user.email.toLowerCase().includes(this.searchTermLower) ||
+             (user.firstName && user.firstName.toLowerCase().includes(this.searchTermLower)) ||
+             (user.lastName && user.lastName.toLowerCase().includes(this.searchTermLower)))
+          );
           this.isSearching = false;
         },
         error: (err) => {
-          console.error('Error searching users:', err);
+          console.error('Error getting users:', err);
           this.isSearching = false;
         },
       });
@@ -168,7 +201,21 @@ export class GroupsComponent implements OnInit, OnDestroy {
     // Activity form
     this.activityForm = this.fb.group({
       activityId: ['', [Validators.required]],
-      scheduledDate: ['', [Validators.required]],
+      city: ['Paris', [Validators.required]],
+      plannedDateStart: ['', [Validators.required]],
+      plannedDateEnd: ['', [Validators.required]],
+      allDayEvent: [false],
+      additionalInfo: [''],
+      meetingPoint: ['']
+    });
+
+    // Edit Activity form
+    this.editActivityForm = this.fb.group({
+      plannedDateStart: ['', [Validators.required]],
+      plannedDateEnd: ['', [Validators.required]],
+      allDayEvent: [false],
+      additionalInfo: [''],
+      meetingPoint: ['']
     });
   }
 
@@ -176,23 +223,11 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.activeTab = 'my-groups';
 
-    // Load owned groups
-    this.groupService.getOwnedGroups().subscribe({
+    // Load user created groups
+    const createdGroupsSub = this.groupService.getUserCreatedGroups().subscribe({
       next: (groups) => {
         this.ownedGroups = groups;
-
-        // Load added groups
-        this.groupService.getAddedGroups().subscribe({
-          next: (addedGroups) => {
-            this.addedGroups = addedGroups;
-            this.isLoading = false;
-          },
-          error: (error) => {
-            console.error('Error loading added groups:', error);
-            this.errorMessage = 'Failed to load groups you are a member of.';
-            this.isLoading = false;
-          },
-        });
+        this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading owned groups:', error);
@@ -200,30 +235,48 @@ export class GroupsComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
     });
+    this.subscriptions.add(createdGroupsSub);
+
+    // Load user member groups
+    const memberGroupsSub = this.groupService.getUserMemberGroups().subscribe({
+      next: (groups) => {
+        this.memberGroups = groups;
+        // Filter out groups where the user is the creator for the joined-groups tab
+        if (this.currentUser) {
+          this.addedGroups = groups.filter(group => 
+            group.creator.id !== this.currentUser?.id
+          );
+        } else {
+          this.addedGroups = [];
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading member groups:', error);
+        this.errorMessage = 'Failed to load groups you are a member of.';
+        this.isLoading = false;
+      },
+    });
+    this.subscriptions.add(memberGroupsSub);
   }
 
-  private loadGroupDetails(groupId: string): void {
+  private loadGroupDetails(groupId: number): void {
     this.isLoading = true;
     this.activeTab = 'group-details';
 
-    this.groupService.getGroupById(groupId).subscribe({
+    // Load group details
+    const groupSub = this.groupService.getGroupById(groupId).subscribe({
       next: (group) => {
-        if (!group) {
-          this.errorMessage = 'Group not found.';
-          this.isLoading = false;
-          this.router.navigate(['/groups']);
-          return;
-        }
-
         this.currentGroup = group;
-
+        
         // Update edit form
         this.editGroupForm.patchValue({
           name: group.name,
           description: group.description,
         });
-
-        this.isLoading = false;
+        
+        // Load group activities
+        this.loadGroupActivities(groupId);
       },
       error: (error) => {
         console.error('Error loading group details:', error);
@@ -232,6 +285,22 @@ export class GroupsComponent implements OnInit, OnDestroy {
         this.router.navigate(['/groups']);
       },
     });
+    this.subscriptions.add(groupSub);
+  }
+
+  private loadGroupActivities(groupId: number): void {
+    const activitiesSub = this.groupService.getGroupActivities(groupId).subscribe({
+      next: (activities) => {
+        this.groupActivities = activities;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading group activities:', error);
+        this.errorMessage = 'Failed to load group activities.';
+        this.isLoading = false;
+      },
+    });
+    this.subscriptions.add(activitiesSub);
   }
 
   // ------ Tab Navigation ------
@@ -266,9 +335,14 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     this.clearMessages();
 
-    this.groupService.createGroup(this.createGroupForm.value).subscribe({
+    const groupData = {
+      name: this.createGroupForm.get('name')?.value,
+      description: this.createGroupForm.get('description')?.value
+    };
+
+    this.groupService.createGroup(groupData).subscribe({
       next: (group) => {
-        this.ownedGroups.push(group);
+        this.ownedGroups = [...this.ownedGroups, group];
         this.successMessage = 'Group created successfully!';
         this.isSubmitting = false;
         this.showCreateGroupModal = false;
@@ -290,8 +364,13 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     this.clearMessages();
 
+    const groupData = {
+      name: this.editGroupForm.get('name')?.value,
+      description: this.editGroupForm.get('description')?.value
+    };
+
     this.groupService
-      .updateGroup(this.currentGroup.id, this.editGroupForm.value)
+      .updateGroup(this.currentGroup.id, groupData)
       .subscribe({
         next: (group) => {
           this.currentGroup = group;
@@ -312,11 +391,11 @@ export class GroupsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (
-      !confirm(
-        `Are you sure you want to delete the group "${this.currentGroup.name}"? This action cannot be undone.`
-      )
-    ) {
+    this.showDeleteGroupDialog = true;
+  }
+
+  confirmDeleteGroup(): void {
+    if (!this.currentGroup) {
       return;
     }
 
@@ -327,14 +406,20 @@ export class GroupsComponent implements OnInit, OnDestroy {
       next: () => {
         this.successMessage = 'Group deleted successfully!';
         this.isSubmitting = false;
+        this.showDeleteGroupDialog = false;
         this.router.navigate(['/groups']);
       },
       error: (error) => {
         console.error('Error deleting group:', error);
         this.errorMessage = 'Failed to delete group. Please try again.';
         this.isSubmitting = false;
+        this.showDeleteGroupDialog = false;
       },
     });
+  }
+
+  cancelDeleteGroup(): void {
+    this.showDeleteGroupDialog = false;
   }
 
   // ------ Member Management ------
@@ -342,9 +427,10 @@ export class GroupsComponent implements OnInit, OnDestroy {
   onSearchMembers(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.searchTerm.next(target.value);
+    this.searchTermLower = target.value.toLowerCase();
   }
 
-  onAddMember(userEmail: string): void {
+  onAddMember(email: string): void {
     if (!this.currentGroup) {
       return;
     }
@@ -352,8 +438,16 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     this.clearMessages();
 
+    // Find user by email from searchResults
+    const user = this.searchResults.find(u => u.email === email);
+    if (!user) {
+      this.errorMessage = 'User not found.';
+      this.isSubmitting = false;
+      return;
+    }
+
     this.groupService
-      .addGroupMember(this.currentGroup.id, userEmail)
+      .addUserToGroup(this.currentGroup.id, user.id)
       .subscribe({
         next: (group) => {
           this.currentGroup = group;
@@ -370,14 +464,25 @@ export class GroupsComponent implements OnInit, OnDestroy {
       });
   }
 
-  onRemoveMember(userEmail: string): void {
+  onRemoveMember(email: string): void {
     if (!this.currentGroup) {
       return;
     }
 
-    if (
-      !confirm('Are you sure you want to remove this member from the group?')
-    ) {
+    // Find user by email from currentGroup.members
+    const member = this.currentGroup.members.find(m => m.email === email);
+    if (!member) {
+      this.errorMessage = 'Member not found.';
+      return;
+    }
+
+    // Set the member to remove and show the dialog
+    this.memberToRemove = { id: member.id, email: member.email };
+    this.showDeleteMemberDialog = true;
+  }
+
+  onConfirmRemoveMember(): void {
+    if (!this.currentGroup || !this.memberToRemove) {
       return;
     }
 
@@ -385,12 +490,14 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.clearMessages();
 
     this.groupService
-      .removeGroupMember(this.currentGroup.id, userEmail)
+      .removeUserFromGroup(this.currentGroup.id, this.memberToRemove.id)
       .subscribe({
         next: (group) => {
           this.currentGroup = group;
           this.successMessage = 'Member removed successfully!';
           this.isSubmitting = false;
+          this.showDeleteMemberDialog = false;
+          this.memberToRemove = null;
         },
         error: (error) => {
           console.error('Error removing member:', error);
@@ -400,39 +507,55 @@ export class GroupsComponent implements OnInit, OnDestroy {
       });
   }
 
+  cancelRemoveMember(): void {
+    this.showDeleteMemberDialog = false;
+    this.memberToRemove = null;
+  }
+
   // ------ Activity Management ------
 
   openAddActivityModal(): void {
-    // Check if the current user is the owner of the group
-    if (
-      !this.currentGroup ||
-      this.currentGroup.owner !== this.currentUserEmail
-    ) {
-      this.errorMessage = 'Only the group owner can add activities';
+    // Check if the current user is the creator of the group
+    if (!this.currentGroup || !this.isGroupCreator(this.currentGroup)) {
+      this.errorMessage = 'Only the group creator can add activities';
       return;
     }
 
-    this.loadActivities();
+    this.selectedCity = 'Paris';
+    this.loadActivities(this.selectedCity);
     this.showAddActivityModal = true;
 
     // Set minimum date to today
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = today.toISOString().slice(0, 16); // Format: YYYY-MM-DDThh:mm
 
     // Reset form with today as minimum date
     this.activityForm.reset({
       activityId: '',
-      scheduledDate: todayStr,
+      city: this.selectedCity,
+      plannedDateStart: todayStr,
+      plannedDateEnd: todayStr,
+      allDayEvent: false,
+      additionalInfo: '',
+      meetingPoint: ''
     });
   }
 
-  private loadActivities(): void {
+  onCityChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.selectedCity = select.value;
+    this.loadActivities(this.selectedCity);
+    
+    // Update the city in the form
+    this.activityForm.patchValue({ city: this.selectedCity });
+  }
+
+  private loadActivities(city: string): void {
     this.isLoadingActivities = true;
 
-    this.activityService.getActivities().subscribe({
-      next: (activities) => {
-        this.activities = activities;
+    this.activityService.getActivitiesByCity(city).subscribe({
+      next: (response) => {
+        this.activities = response.activities;
         this.isLoadingActivities = false;
       },
       error: (error) => {
@@ -451,118 +574,118 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     this.clearMessages();
 
-    const activityId = Number(this.activityForm.get('activityId')?.value);
-    let scheduledDate = this.activityForm.get('scheduledDate')?.value;
-
-    // Ensure scheduledDate is a valid date string in ISO format
-    if (scheduledDate) {
-      try {
-        // Convert to Date object first to validate
-        const scheduledDateObj = new Date(scheduledDate);
-
-        if (isNaN(scheduledDateObj.getTime())) {
-          this.errorMessage =
-            'Invalid date format. Please select a valid date.';
-          this.isSubmitting = false;
-          return;
-        }
-
-        // Format as ISO string for storage
-        scheduledDate = scheduledDateObj.toISOString();
-        console.log('Formatted scheduled date:', scheduledDate);
-      } catch (error) {
-        this.errorMessage = 'Error processing date. Please try again.';
-        this.isSubmitting = false;
-        console.error('Date parsing error:', error);
-        return;
-      }
-    } else {
-      this.errorMessage =
-        'A scheduled date is required for activities to appear in the calendar.';
-      this.isSubmitting = false;
-      return;
-    }
+    const activityData = {
+      activityId: this.activityForm.get('activityId')?.value,
+      plannedDateStart: this.activityForm.get('plannedDateStart')?.value,
+      plannedDateEnd: this.activityForm.get('plannedDateEnd')?.value,
+      allDayEvent: this.activityForm.get('allDayEvent')?.value || false,
+      additionalInfo: this.activityForm.get('additionalInfo')?.value,
+      meetingPoint: this.activityForm.get('meetingPoint')?.value
+    };
 
     this.groupService
-      .addActivityToGroup(this.currentGroup.id, activityId, scheduledDate)
+      .addActivityToGroup(this.currentGroup.id, activityData)
       .subscribe({
-        next: (groupActivity) => {
-          // Reload the group to get the updated activities
-          this.loadGroupDetails(this.currentGroup!.id);
-          this.successMessage =
-            'Activity added successfully! The activity will appear in your calendar.';
+        next: () => {
+          // Reload the group activities
+          this.loadGroupActivities(this.currentGroup!.id);
+          this.successMessage = 'Activity added successfully! The activity will appear in your calendar.';
           this.isSubmitting = false;
           this.showAddActivityModal = false;
           this.activityForm.reset();
         },
         error: (error) => {
           console.error('Error adding activity:', error);
-          this.errorMessage =
-            error.message || 'Failed to add activity. Please try again.';
+          this.errorMessage = error.message || 'Failed to add activity. Please try again.';
           this.isSubmitting = false;
         },
       });
   }
 
-  onUpdateActivityDate(activityId: string): void {
+  onUpdateActivityDate(activityId: number): void {
     if (!this.currentGroup) {
       return;
     }
 
-    const activity = this.currentGroup.activities.find(
-      (a) => a.id === activityId
-    );
+    const activity = this.groupActivities.find(a => a.id === activityId);
     if (!activity) {
       this.errorMessage = 'Activity not found';
       return;
     }
 
-    // Create a form just for updating the date
-    const updateForm = this.fb.group({
-      scheduledDate: [activity.plannedDate, [Validators.required]],
+    this.currentActivity = activity;
+    this.currentActivityId = activityId;
+
+    // Convert dates to local ISO string format for datetime-local input
+    const startDate = new Date(activity.plannedDateStart);
+    const endDate = new Date(activity.plannedDateEnd);
+
+    this.editActivityForm.patchValue({
+      plannedDateStart: startDate.toISOString().slice(0, 16),
+      plannedDateEnd: endDate.toISOString().slice(0, 16),
+      allDayEvent: activity.allDayEvent || false,
+      additionalInfo: activity.additionalInfo || '',
+      meetingPoint: activity.meetingPoint || ''
     });
 
-    // Show a dialog for updating the date
-    // This would be implemented with a dialog component
-    // For now, we'll just use a prompt
-    const newDateStr = prompt(
-      'Enter new date (YYYY-MM-DD):',
-      activity.plannedDate
-        ? new Date(activity.plannedDate).toISOString().split('T')[0]
-        : ''
-    );
+    this.showEditActivityDialog = true;
+  }
 
-    if (!newDateStr) {
-      return; // User cancelled
+  onConfirmUpdateActivity(): void {
+    if (this.editActivityForm.invalid || !this.currentGroup || !this.currentActivityId) {
+      return;
     }
 
     this.isSubmitting = true;
     this.clearMessages();
 
+    const activityData = {
+      activityId: this.currentActivity?.activityId, // Preserve the original activityId
+      plannedDateStart: this.editActivityForm.get('plannedDateStart')?.value,
+      plannedDateEnd: this.editActivityForm.get('plannedDateEnd')?.value,
+      allDayEvent: this.editActivityForm.get('allDayEvent')?.value || false,
+      additionalInfo: this.editActivityForm.get('additionalInfo')?.value || '',
+      meetingPoint: this.editActivityForm.get('meetingPoint')?.value || ''
+    };
+
     this.groupService
-      .updateGroupActivityDate(this.currentGroup.id, activityId, newDateStr)
+      .updateGroupActivity(this.currentGroup.id, this.currentActivityId, activityData)
       .subscribe({
-        next: (group) => {
-          this.currentGroup = group;
-          this.successMessage = 'Activity date updated successfully!';
+        next: () => {
+          // Update the activity in the list
+          this.loadGroupActivities(this.currentGroup!.id);
+          this.successMessage = 'Activity updated successfully!';
           this.isSubmitting = false;
+          this.showEditActivityDialog = false;
+          this.currentActivityId = null;
+          this.currentActivity = null;
         },
         error: (error) => {
-          console.error('Error updating activity date:', error);
-          this.errorMessage =
-            error.message ||
-            'Failed to update activity date. Please try again.';
+          console.error('Error updating activity:', error);
+          this.errorMessage = 'Failed to update activity. Please try again.';
           this.isSubmitting = false;
         },
       });
   }
 
-  onDeleteActivity(activityId: string): void {
+  onDeleteActivity(activityId: number): void {
     if (!this.currentGroup) {
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this activity?')) {
+    const activity = this.groupActivities.find(a => a.id === activityId);
+    if (!activity) {
+      this.errorMessage = 'Activity not found';
+      return;
+    }
+
+    this.currentActivity = activity;
+    this.currentActivityId = activityId;
+    this.showDeleteActivityDialog = true;
+  }
+
+  onConfirmDeleteActivity(): void {
+    if (!this.currentGroup || !this.currentActivityId) {
       return;
     }
 
@@ -570,12 +693,16 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.clearMessages();
 
     this.groupService
-      .deleteGroupActivity(this.currentGroup.id, activityId)
+      .removeActivityFromGroup(this.currentGroup.id, this.currentActivityId)
       .subscribe({
-        next: (group) => {
-          this.currentGroup = group;
+        next: () => {
+          // Remove the activity from the list
+          this.groupActivities = this.groupActivities.filter(a => a.id !== this.currentActivityId);
           this.successMessage = 'Activity deleted successfully!';
           this.isSubmitting = false;
+          this.showDeleteActivityDialog = false;
+          this.currentActivityId = null;
+          this.currentActivity = null;
         },
         error: (error) => {
           console.error('Error deleting activity:', error);
@@ -583,6 +710,12 @@ export class GroupsComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
         },
       });
+  }
+
+  cancelDeleteActivity(): void {
+    this.showDeleteActivityDialog = false;
+    this.currentActivityId = null;
+    this.currentActivity = null;
   }
 
   // ------ Modal Management ------
@@ -621,6 +754,19 @@ export class GroupsComponent implements OnInit, OnDestroy {
       case 'activity':
         this.showAddActivityModal = false;
         break;
+      case 'delete':
+        this.showDeleteGroupDialog = false;
+        break;
+      case 'edit-activity':
+        this.showEditActivityDialog = false;
+        break;
+      case 'delete-activity':
+        this.showDeleteActivityDialog = false;
+        break;
+      case 'delete-member':
+        this.showDeleteMemberDialog = false;
+        this.memberToRemove = null;
+        break;
     }
   }
 
@@ -631,36 +777,79 @@ export class GroupsComponent implements OnInit, OnDestroy {
     this.successMessage = '';
   }
 
-  formatDate(date: string | null | undefined): string {
+  formatDate(date: string | number[] | null | undefined): string {
     if (!date) return 'N/A';
 
-    const dateObj = new Date(date);
-    return dateObj.toLocaleString();
+    try {
+      // Handle array format [year, month, day, hour, minute, second, nano]
+      if (Array.isArray(date) && date.length >= 7) {
+        const [year, month, day, hour, minute] = date;
+        // Note: Month in JS Date is 0-indexed, but our API returns 1-indexed month
+        const dateObj = new Date(year, month - 1, day, hour, minute);
+        return dateObj.toLocaleString();
+      }
+      
+      // Handle string format
+      if (typeof date === 'string') {
+        // If the date is in the format "2025-04-16 20:25:00"
+        if (date.includes('-') && date.includes(':')) {
+          const [datePart, timePart] = date.split(' ');
+          const [year, month, day] = datePart.split('-').map(Number);
+          const [hour, minute, second] = timePart.split(':').map(Number);
+          const dateObj = new Date(year, month - 1, day, hour, minute, second);
+          return dateObj.toLocaleString();
+        }
+        
+        // Handle ISO format or other string formats
+        const dateObj = new Date(date);
+        return dateObj.toLocaleString();
+      }
+      
+      return 'Invalid date';
+    } catch (error) {
+      console.error('Error formatting date:', error, 'Date value:', date);
+      return 'Invalid date';
+    }
+  }
+
+  isGroupCreator(group: Group): boolean {
+    return this.currentUser?.id === group.creator.id;
   }
 
   isGroupOwner(group: Group): boolean {
-    return this.currentUserEmail === group.owner;
+    return this.isGroupCreator(group);
   }
 
   canManageGroup(group: Group): boolean {
-    return this.isGroupOwner(group);
+    return this.isGroupCreator(group);
+  }
+
+  getCurrentUserEmail(): string {
+    return this.currentUser?.email || '';
   }
 
   getUserEmail(): string {
-    return this.currentUserEmail;
+    return this.getCurrentUserEmail();
   }
 
-  getActivityImage(activity: GroupActivity): string | undefined {
-    if (!activity || !activity.activityId) return undefined;
-
-    const fullActivity = this.activityService.getActivityByIdSync(
-      activity.activityId
-    );
-    if (fullActivity && fullActivity.images && fullActivity.images.length > 0) {
-      return fullActivity.images[0]; // Return the first image
+  isUserInGroup(email: string): boolean {
+    if (!this.currentGroup || !this.currentGroup.members) {
+      return false;
     }
+    return this.currentGroup.members.some(member => member.email === email);
+  }
 
-    return undefined; // Return undefined if no images are available
+  getActivityImage(activity: GroupActivity): string | null {
+    // Check if activity has images from the API response structure
+    if (activity && 
+        activity.activity && 
+        typeof activity.activity === 'object' && 
+        activity.activity.images && 
+        Array.isArray(activity.activity.images) && 
+        activity.activity.images.length > 0) {
+      return activity.activity.images[0];
+    }
+    return null;
   }
 
   navigateToActivityDetails(activity: GroupActivity): void {
@@ -685,9 +874,8 @@ export class GroupsComponent implements OnInit, OnDestroy {
     }
 
     if (control.hasError('minlength')) {
-      return `Minimum length is ${
-        control.getError('minlength').requiredLength
-      } characters`;
+      const minLength = control.getError('minlength').requiredLength;
+      return `Minimum length is ${minLength} characters`;
     }
 
     return 'Invalid input';
