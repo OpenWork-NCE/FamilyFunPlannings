@@ -114,13 +114,20 @@ export class AuthService {
 
     // Initialize state if in browser
     if (this.isBrowser) {
+      // Validate token and set auth state accordingly
       const hasToken = this.hasValidToken();
       this.isAuthenticatedSubject.next(hasToken);
       console.log('[AuthService] Initial auth state:', hasToken);
       
-      const user = this.getUserFromStorage();
-      this.currentUserSubject.next(user);
-      if (user) console.log('[AuthService] User loaded from storage:', user.email);
+      // Only load user data if we have a valid token
+      if (hasToken) {
+        const user = this.getUserFromStorage();
+        this.currentUserSubject.next(user);
+        if (user) console.log('[AuthService] User loaded from storage:', user.email);
+      } else {
+        // Clear any existing user data if token is invalid
+        this.currentUserSubject.next(null);
+      }
       
       const isGuest = this.getLocalStorage(this.GUEST_KEY) === 'true';
       this.isGuestSubject.next(isGuest);
@@ -178,16 +185,23 @@ export class AuthService {
   /**
    * Register a new user
    * @param data Registration data
+   * @param redirectUrl URL to redirect after email verification
    * @returns Observable with message response
    */
-  register(data: RegistrationData): Observable<MessageResponse> {
+  register(data: RegistrationData, redirectUrl?: string): Observable<MessageResponse> {
     // Default role to "user" if not provided
     const userData = {
       ...data,
       role: data.role || ['user']
     };
     
-    return this.http.post<MessageResponse>(`${this.API_URL}/register`, userData).pipe(
+    // Build the request URL with redirectUrl if provided
+    let requestUrl = `${this.API_URL}/register`;
+    if (redirectUrl) {
+      requestUrl += `?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    }
+    
+    return this.http.post<MessageResponse>(requestUrl, userData).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Registration error:', error);
         return throwError(() => this.getErrorMessage(error, 'register'));
@@ -201,7 +215,7 @@ export class AuthService {
    * @returns Observable with message response
    */
   verifyEmail(token: string): Observable<MessageResponse> {
-    return this.http.get<MessageResponse>(`${this.API_URL}/verify?token=${token}`).pipe(
+    return this.http.get<MessageResponse>(`${this.API_URL}/verify?token=${encodeURIComponent(token)}`).pipe(
       catchError((error: HttpErrorResponse) => {
         return throwError(() => this.getErrorMessage(error, 'verify'));
       })
@@ -211,10 +225,17 @@ export class AuthService {
   /**
    * Request password reset
    * @param email User email
+   * @param redirectUrl URL to redirect for password reset confirmation
    * @returns Observable with message response
    */
-  requestPasswordReset(email: string): Observable<MessageResponse> {
-    return this.http.post<MessageResponse>(`${this.API_URL}/reset-password?email=${email}`, {}).pipe(
+  requestPasswordReset(email: string, redirectUrl?: string): Observable<MessageResponse> {
+    // Build the request URL with redirectUrl if provided
+    let requestUrl = `${this.API_URL}/reset-password?email=${encodeURIComponent(email)}`;
+    if (redirectUrl) {
+      requestUrl += `&redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    }
+    
+    return this.http.post<MessageResponse>(requestUrl, {}).pipe(
       catchError((error: HttpErrorResponse) => {
         return throwError(() => this.getErrorMessage(error, 'resetRequest'));
       })
@@ -317,7 +338,18 @@ export class AuthService {
    * @returns Boolean indicating if user is authenticated
    */
   isAuthenticated(): boolean {
-    return this.isAuthenticatedSubject.getValue();
+    // Force revalidation of token when checking authentication
+    const isValid = this.hasValidToken();
+    
+    // If token is not valid but we thought we were authenticated,
+    // update the state
+    if (!isValid && this.isAuthenticatedSubject.getValue()) {
+      console.log('[AuthService] Token invalid, resetting auth state');
+      this.isAuthenticatedSubject.next(false);
+      this.currentUserSubject.next(null);
+    }
+    
+    return isValid;
   }
 
   /**
@@ -373,7 +405,27 @@ export class AuthService {
    */
   private hasValidToken(): boolean {
     const token = this.getLocalStorage(this.ACCESS_TOKEN_KEY);
-    return !!token; // Simple check for token existence
+    if (!token) return false;
+    
+    try {
+      // Check token expiration by decoding the JWT payload
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expTime = payload.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+      
+      if (expTime < currentTime) {
+        console.log('[AuthService] Token expired');
+        // Token expired - clean up
+        this.removeLocalStorage(this.ACCESS_TOKEN_KEY);
+        this.removeLocalStorage(this.REFRESH_TOKEN_KEY);
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      console.error('[AuthService] Error validating token:', e);
+      return false;
+    }
   }
 
   /**

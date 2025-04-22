@@ -2,8 +2,11 @@ import {
   HttpInterceptorFn,
   HttpRequest,
   HttpHandlerFn,
+  HttpErrorResponse,
 } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -17,6 +20,7 @@ export const JwtInterceptor: HttpInterceptorFn = (
   next: HttpHandlerFn
 ) => {
   const authService = inject(AuthService);
+  const router = inject(Router);
   const token = authService.getAccessToken();
 
   // Only add the Authorization header if a token exists
@@ -29,6 +33,17 @@ export const JwtInterceptor: HttpInterceptorFn = (
     });
   }
 
-  // Pass the modified request to the next handler
-  return next(req);
+  // Pass the modified request to the next handler and catch unauthorized errors
+  return next(req).pipe(
+    catchError((error: HttpErrorResponse) => {
+      // Check if it's a 401 Unauthorized error (which indicates expired token)
+      if (error.status === 401) {
+        console.log('[JwtInterceptor] Token expired or invalid, logging out');
+        // Log the user out and redirect to login
+        authService.logout();
+        router.navigate(['/login']);
+      }
+      return throwError(() => error);
+    })
+  );
 };

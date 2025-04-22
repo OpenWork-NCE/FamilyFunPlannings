@@ -79,8 +79,12 @@ export class ResetPasswordComponent implements OnInit {
     // Get form values
     const email = this.resetForm.value.email;
 
-    // Call auth service to request password reset
-    this.authService.requestPasswordReset(email).subscribe({
+    // Create redirect URL for reset password confirmation
+    const baseUrl = window.location.origin;
+    const redirectUrl = `${baseUrl}/reset-password-confirm`;
+
+    // Call auth service to request password reset with redirect URL
+    this.authService.requestPasswordReset(email, redirectUrl).subscribe({
       next: (response) => {
         // Show success message
         this.successMessage = response.message || 'Password reset email sent. Please check your inbox.';

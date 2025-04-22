@@ -21,10 +21,10 @@ export class BottomNavComponent {
   navItems: NavItem[] = [
     { label: 'Home', icon: 'explore', route: '/home', showInGuestMode: true },
     {
-      label: 'Activities',
-      icon: 'activities',
-      route: '/activities',
-      showInGuestMode: true,
+      label: 'Groups',
+      icon: 'groups',
+      route: '/groups',
+      showInGuestMode: false,
     },
     {
       label: 'Calendar',
@@ -36,12 +36,6 @@ export class BottomNavComponent {
       label: 'Weather',
       icon: 'weather',
       route: '/weather',
-      showInGuestMode: false,
-    },
-    {
-      label: 'Groups',
-      icon: 'groups',
-      route: '/groups',
       showInGuestMode: false,
     },
     {

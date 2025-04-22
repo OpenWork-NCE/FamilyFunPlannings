@@ -19,6 +19,12 @@ export class VerifyEmailComponent implements OnInit {
   // Success message to display
   successMessage: string | null = null;
 
+  // Store the token from URL
+  token: string | null = null;
+
+  // Flag to track if verification has been initiated
+  hasInitiatedVerification = false;
+
   constructor(
     private authService: AuthService,
     private router: Router,
@@ -34,7 +40,10 @@ export class VerifyEmailComponent implements OnInit {
       const token = params['token'];
       
       if (token) {
-        this.verifyEmail(token);
+        // Store the token for later use
+        this.token = token;
+        this.isVerifying = false;
+        this.hasInitiatedVerification = true;
       } else {
         this.errorMessage = 'Verification token is missing. Please check your email link.';
         this.isVerifying = false;
@@ -44,18 +53,20 @@ export class VerifyEmailComponent implements OnInit {
 
   /**
    * Verify email with token
-   * @param token Verification token
+   * Called when user clicks the "Confirm Verification" button
    */
-  private verifyEmail(token: string): void {
-    this.authService.verifyEmail(token).subscribe({
+  verifyEmail(): void {
+    if (!this.token) {
+      this.errorMessage = 'Verification token is missing. Please check your email link.';
+      return;
+    }
+    
+    this.isVerifying = true;
+    
+    this.authService.verifyEmail(this.token).subscribe({
       next: (response) => {
         this.successMessage = response.message || 'Email verified successfully! You can now log in.';
         this.isVerifying = false;
-        
-        // Redirect to login page after a short delay
-        setTimeout(() => {
-          this.router.navigate(['/login']);
-        }, 3000);
       },
       error: (error) => {
         this.errorMessage = error.message || 'Email verification failed. The link may be expired or invalid.';

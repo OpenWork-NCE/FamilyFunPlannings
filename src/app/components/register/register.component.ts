@@ -232,8 +232,12 @@ export class RegisterComponent implements OnInit {
     const registrationData: RegistrationData = formData;
     console.log('Sending registration data:', registrationData);
 
+    // Create redirect URL for email verification
+    const baseUrl = window.location.origin;
+    const redirectUrl = `${baseUrl}/verify-email`;
+
     // Call auth service to register
-    this.authService.register(registrationData).subscribe({
+    this.authService.register(registrationData, redirectUrl).subscribe({
       next: (response) => {
         console.log('Registration successful with response:', response);
         // Show success message with verification instruction
@@ -249,12 +253,14 @@ export class RegisterComponent implements OnInit {
         // After successful registration, redirect to login page after a short delay
         setTimeout(() => {
           this.router.navigate(['/login']);
-        }, 3000);
+        }, 5000);
       },
       error: (error) => {
         console.error('Registration error:', error);
-        // Set error message and reset submitting flag
+        // Set error message
         this.errorMessage = error.message || 'Registration failed. Please try again.';
+        
+        // Reset submitting flag
         this.isSubmitting = false;
       },
     });
